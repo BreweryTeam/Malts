@@ -3,7 +3,7 @@ package dev.jsinco.malts.commands.subcommands;
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.gui.VaultOtherGui;
-import dev.jsinco.malts.obj.MaltsPlayer;
+import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Util;
@@ -18,7 +18,7 @@ import java.util.stream.IntStream;
 
 public class VaultOtherCommand implements SubCommand {
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.isEmpty()) return false;
         Player player = (Player) sender;
         OfflinePlayer target = Bukkit.getOfflinePlayer(args.getFirst());
@@ -34,15 +34,15 @@ public class VaultOtherCommand implements SubCommand {
 
         dataSource.getVault(target.getUniqueId(), vaultId, false).thenAccept(vault -> {
             if (vault == null) {
-                lng.entry(l -> l.vaults().noVaultFound(), player, Couple.of("{id}", vaultId));
+                LANG.entry(l -> l.vaults().noVaultFound(), player, Couple.of("{id}", vaultId));
                 return;
             } else if (!vault.canAccess(player)) {
-                lng.entry(l -> l.vaults().noAccess(), player, Couple.of("{id}", vaultId));
+                LANG.entry(l -> l.vaults().noAccess(), player, Couple.of("{id}", vaultId));
                 return;
             }
 
             vault.open(player);
-            lng.entry(l -> l.vaults().opening(),
+            LANG.entry(l -> l.vaults().opening(),
                     player,
                     Couple.of("{id}", vaultId),
                     Couple.of("{vaultName}", vault.getCustomName())
@@ -52,7 +52,7 @@ public class VaultOtherCommand implements SubCommand {
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         if (args.size() <= 1) {
             return null;
         }

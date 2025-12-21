@@ -3,8 +3,8 @@ package dev.jsinco.malts.commands.subcommands;
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.ArgumentFlagReader;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
-import dev.jsinco.malts.obj.Vault;
-import dev.jsinco.malts.obj.VaultContentScanner;
+import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.VaultContentScanner;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Util;
@@ -23,7 +23,7 @@ public class SearchCommand implements SubCommand {
     public static final String SEARCH_OTHERS_PERMISSION = "malts.searchother";
 
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.isEmpty()) return false;
 
         DataSource dataSource = DataSource.getInstance();
@@ -33,7 +33,7 @@ public class SearchCommand implements SubCommand {
         String searchTerm = String.join(" ", argumentFlagReader.getNewArguments());
 
         if (player == null) {
-            lng.entry(l -> l.command().search().playerNotFound(), sender);
+            LANG.entry(l -> l.command().search().playerNotFound(), sender);
             return true;
         }
 
@@ -50,7 +50,7 @@ public class SearchCommand implements SubCommand {
                     .toList();
 
             if (vaults.isEmpty()) {
-                lng.entry(l -> l.command().search().noAccessibleVaults(), sender, Couple.of("{name}", name));
+                LANG.entry(l -> l.command().search().noAccessibleVaults(), sender, Couple.of("{name}", name));
                 return;
             }
 
@@ -62,7 +62,7 @@ public class SearchCommand implements SubCommand {
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         if (args.size() > 1) {
             ArgumentFlagReader reader = new ArgumentFlagReader(List.of(args.get(args.size() - 2)));
 

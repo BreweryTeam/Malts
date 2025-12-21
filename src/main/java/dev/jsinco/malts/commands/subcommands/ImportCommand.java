@@ -19,7 +19,7 @@ import static dev.jsinco.malts.utility.Text.CONSOLE;
 public class ImportCommand implements SubCommand {
 
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.isEmpty()) {
             return false;
         }
@@ -31,7 +31,7 @@ public class ImportCommand implements SubCommand {
 
 
         if (!event.callEvent()) {
-            lng.entry(l -> l.command()._import().cannotImport(),
+            LANG.entry(l -> l.command()._import().cannotImport(),
                     sender,
                     Couple.of("{importer}", importerName)
             );
@@ -40,7 +40,7 @@ public class ImportCommand implements SubCommand {
 
         Importer importer = event.getImporter();
 
-        lng.entry(l -> l.command()._import().startImport(),
+        LANG.entry(l -> l.command()._import().startImport(),
                 List.of(sender, CONSOLE),
                 Couple.of("{importer}", importerName)
         );
@@ -49,7 +49,7 @@ public class ImportCommand implements SubCommand {
                     .filter(e -> e.getValue() != Importer.Result.SUCCESS) // change method if different
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            lng.entry(l -> l.command()._import().importComplete(),
+            LANG.entry(l -> l.command()._import().importComplete(),
                     List.of(sender, CONSOLE),
                     Couple.of("{amount}", results.size()),
                     Couple.of("{failedAmount}", failed.size())
@@ -57,7 +57,7 @@ public class ImportCommand implements SubCommand {
 
             if (!failed.isEmpty()) {
                 failed.forEach((uuid, r) -> {
-                    lng.entry(l -> l.command()._import().failedImport(),
+                    LANG.entry(l -> l.command()._import().failedImport(),
                             List.of(sender, CONSOLE),
                             Couple.of("{uuid}", uuid),
                             Couple.of("{result}", Util.formatEnumerator(r))
@@ -69,7 +69,7 @@ public class ImportCommand implements SubCommand {
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         return List.copyOf(Registry.IMPORTERS.keySet());
     }
 

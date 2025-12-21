@@ -2,7 +2,7 @@ package dev.jsinco.malts.commands.subcommands;
 
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
-import dev.jsinco.malts.obj.CachedObject;
+import dev.jsinco.malts.model.CachedObject;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import lombok.Getter;
@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 public class VaultNameCommand implements SubCommand {
 
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.isEmpty()) {
             return false;
         }
@@ -29,17 +29,17 @@ public class VaultNameCommand implements SubCommand {
         DataSource dataSource = DataSource.getInstance();
         dataSource.getVault(player.getUniqueId(), vaultName).thenAccept(vault -> {
             if (vault == null) {
-                lng.entry(l -> l.vaults().noVaultFound(), player);
+                LANG.entry(l -> l.vaults().noVaultFound(), player);
                 return;
             }
             vault.open(player);
-            lng.entry(l -> l.vaults().opening(), player, Couple.of("{vaultName}", vault.getCustomName()));
+            LANG.entry(l -> l.vaults().opening(), player, Couple.of("{vaultName}", vault.getCustomName()));
         });
         return true;
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         if (!(sender instanceof Player player)) {
             return List.of();
         }

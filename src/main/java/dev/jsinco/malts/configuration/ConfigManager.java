@@ -2,6 +2,7 @@ package dev.jsinco.malts.configuration;
 
 import com.google.common.base.Preconditions;
 import dev.jsinco.malts.Malts;
+import dev.jsinco.malts.configuration.serdes.DriverConstantTransformer;
 import dev.jsinco.malts.configuration.serdes.IntPairTransformer;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.registry.RegistryCrafter;
@@ -44,6 +45,7 @@ public class ConfigManager implements RegistryCrafter.Extension<OkaeriConfig> {
             it.withBindFile(bindFile);
             it.withSerdesPack(serdes -> {
                 serdes.register(new IntPairTransformer());
+                serdes.register(new DriverConstantTransformer());
             });
 
             it.saveDefaults();

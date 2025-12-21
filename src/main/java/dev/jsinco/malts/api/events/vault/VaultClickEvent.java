@@ -1,7 +1,7 @@
 package dev.jsinco.malts.api.events.vault;
 
 import dev.jsinco.malts.api.events.interfaces.VaultEvent;
-import dev.jsinco.malts.obj.Vault;
+import dev.jsinco.malts.model.Vault;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.jetbrains.annotations.NotNull;

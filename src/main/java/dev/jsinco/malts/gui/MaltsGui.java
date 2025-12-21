@@ -1,7 +1,7 @@
 package dev.jsinco.malts.gui;
 
 import dev.jsinco.malts.api.events.gui.MaltsGuiOpenEvent;
-import dev.jsinco.malts.obj.MaltsInventory;
+import dev.jsinco.malts.model.MaltsInventory;
 import dev.jsinco.malts.gui.item.AbstractGuiItem;
 import dev.jsinco.malts.gui.item.IgnoreAutoRegister;
 import dev.jsinco.malts.utility.Executors;

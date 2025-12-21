@@ -10,11 +10,11 @@ import java.util.List;
 
 public interface SubCommand extends RegistryItem {
 
-    Lang lng = ConfigManager.get(Lang.class);
+    Lang LANG = ConfigManager.get(Lang.class);
 
-    boolean execute(Malts plugin, CommandSender sender, String label, List<String> args);
+    boolean execute(CommandSender sender, String label, List<String> args);
 
-    List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args);
+    List<String> tabComplete(CommandSender sender, String label, List<String> args);
 
     String permission();
 

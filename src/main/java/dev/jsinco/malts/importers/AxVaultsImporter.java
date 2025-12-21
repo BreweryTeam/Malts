@@ -1,6 +1,6 @@
 package dev.jsinco.malts.importers;
 
-import dev.jsinco.malts.obj.Vault;
+import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.ClassUtil;
 import dev.jsinco.malts.utility.Couple;

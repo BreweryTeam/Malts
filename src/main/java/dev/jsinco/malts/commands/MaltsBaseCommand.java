@@ -29,7 +29,7 @@ public class MaltsBaseCommand implements TabExecutor {
                     (subCommand.permission() != null && !sender.hasPermission(subCommand.permission()))) {
                 subCommand = Registry.SUB_COMMANDS.get(HelpCommand.class);
             }
-            return subCommand.execute(Malts.getInstance(), sender, label, new ArrayList<>());
+            return subCommand.execute(sender, label, new ArrayList<>());
         }
 
         String subCommandName = args[0].toLowerCase();
@@ -50,7 +50,7 @@ public class MaltsBaseCommand implements TabExecutor {
         List<String> commandArgs = new ArrayList<>(List.of(args));
         commandArgs.removeFirst(); // Remove the subcommand name
 
-        boolean result = subCommand.execute(Malts.getInstance(), sender, label, commandArgs);
+        boolean result = subCommand.execute(sender, label, commandArgs);
         if (!result) {
             lang.entry(l -> l.command().base().invalidUsage(), sender);
         }
@@ -79,6 +79,6 @@ public class MaltsBaseCommand implements TabExecutor {
         List<String> commandArgs = new ArrayList<>(List.of(args));
         commandArgs.removeFirst();
 
-        return subCommand.tabComplete(Malts.getInstance(), sender, label, commandArgs);
+        return subCommand.tabComplete(sender, label, commandArgs);
     }
 }

@@ -1,8 +1,7 @@
 package dev.jsinco.malts.api.events.interfaces;
 
 import dev.jsinco.malts.api.events.MaltsEvent;
-import dev.jsinco.malts.obj.Vault;
-import org.bukkit.Bukkit;
+import dev.jsinco.malts.model.Vault;
 import org.bukkit.event.Cancellable;
 import org.jetbrains.annotations.NotNull;
 

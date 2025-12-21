@@ -1,4 +1,4 @@
-package dev.jsinco.malts.obj;
+package dev.jsinco.malts.model;
 
 import com.google.common.base.Preconditions;
 import dev.jsinco.malts.commands.subcommands.SearchCommand;

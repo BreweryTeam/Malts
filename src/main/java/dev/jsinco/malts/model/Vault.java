@@ -1,4 +1,4 @@
-package dev.jsinco.malts.obj;
+package dev.jsinco.malts.model;
 
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
@@ -12,7 +12,6 @@ import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.storage.DataSource;
-import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Text;
 import dev.jsinco.malts.utility.Util;
@@ -29,15 +28,17 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Represents a transient vault inventory in Malts.
+ *
+ * <p>
+ * Please note: Unlike other objects in malts, vaults are never cached in memory and are always transient.
+ *
+ * </p>
  * 
  * @see dev.jsinco.malts.storage.DataSource#getVault(UUID, int) 
  * @see dev.jsinco.malts.storage.DataSource#saveVault(Vault) 
@@ -50,7 +51,8 @@ public class Vault implements MaltsInventory {
     public static String BYPASS_OPEN_VAULT_PERM = "malts.bypass.openvault";
 
     private static final Gson GSON = Util.GSON;
-    private static final Config cfg = ConfigManager.get(Config.class);
+    private static final Config CONFIG = ConfigManager.get(Config.class);
+    private static final Lang LANG = ConfigManager.get(Lang.class);
 
     @Getter
     private final VaultKey key;
@@ -64,11 +66,11 @@ public class Vault implements MaltsInventory {
     public Vault(UUID owner, int id) {
         Preconditions.checkArgument(id > 0, "Vault ID must be greater than 0");
         this.key = VaultKey.of(owner, id);
-        this.customName = cfg.vaults().defaultName().replace("{id}", String.valueOf(id));
-        this.icon = cfg.vaults().defaultIcon();
+        this.customName = CONFIG.vaults().defaultName().replace("{id}", String.valueOf(id));
+        this.icon = CONFIG.vaults().defaultIcon();
         this.trustedPlayers = new ArrayList<>();
 
-        int size = cfg.vaults().size();
+        int size = CONFIG.vaults().size();
 
         this.inventory = Bukkit.createInventory(this, size, Text.mm(customName));
     }
@@ -76,13 +78,13 @@ public class Vault implements MaltsInventory {
     public Vault(UUID owner, int id, ItemStack[] items) {
         Preconditions.checkArgument(id > 0, "Vault ID must be greater than 0");
         this.key = VaultKey.of(owner, id);
-        this.customName = cfg.vaults().defaultName().replace("{id}", String.valueOf(id));
-        this.icon = cfg.vaults().defaultIcon();
+        this.customName = CONFIG.vaults().defaultName().replace("{id}", String.valueOf(id));
+        this.icon = CONFIG.vaults().defaultIcon();
         this.trustedPlayers = new ArrayList<>();
 
 
         int count = items != null ? items.length : 9;
-        int size = Math.max(((count + 8) / 9) * 9, cfg.vaults().size());
+        int size = Math.max(((count + 8) / 9) * 9, CONFIG.vaults().size());
         this.inventory = Bukkit.createInventory(this, size, Text.mm(customName));
         if (items != null) {
             inventory.setContents(items);
@@ -92,7 +94,7 @@ public class Vault implements MaltsInventory {
     public Vault(UUID owner, int id, String encodedInventory, String customName, Material icon, String trustedPlayers) {
         this.key = VaultKey.of(owner, id);
         this.customName = customName != null && !customName.isEmpty() ? customName : "Vault #" + id;
-        this.icon = icon != null && icon.isItem() ? icon : cfg.vaults().defaultIcon();
+        this.icon = icon != null && icon.isItem() ? icon : CONFIG.vaults().defaultIcon();
 
         List<UUID> json = GSON.fromJson(trustedPlayers, LIST_UUID_TYPE_TOKEN);
         this.trustedPlayers = json != null ? json : new ArrayList<>();
@@ -103,7 +105,7 @@ public class Vault implements MaltsInventory {
         }
 
         int count = items != null ? items.length : 9;
-        int size = Math.max(((count + 8) / 9) * 9, cfg.vaults().size());
+        int size = Math.max(((count + 8) / 9) * 9, CONFIG.vaults().size());
         this.inventory = Bukkit.createInventory(this, size, Text.mm(customName));
         if (items != null) {
             inventory.setContents(items);
@@ -128,19 +130,21 @@ public class Vault implements MaltsInventory {
     public void open(Player player) {
         Executors.runSync(() -> {
             List<Player> viewers = this.getViewers();
-            boolean canOpen = this.canOpen(player, viewers);
+            State canOpen = this.canOpen(player, viewers);
             VaultOpenEvent event = new VaultOpenEvent(this, player, viewers, !Bukkit.isPrimaryThread());
-            event.setCancelled(!canOpen);
+            event.setCancelled(!canOpen.toBoolean());
             Text.debug("Player " + player.getName() + " is attempting to open vault " + this.key.id() + ". Can open: " + canOpen);
 
             if (!event.callEvent()) {
-                ConfigManager.get(Lang.class).entry(l -> l.vaults().alreadyOpen(), player);
+                if (canOpen == State.DATABASE_BUSY) {
+                    LANG.entry(l -> l.vaults().databaseBusy(), player);
+                } else {
+                    LANG.entry(l -> l.vaults().alreadyOpen(), player);
+                }
                 return;
             }
 
             player.openInventory(this.inventory);
-
-
 
             if (viewers.isEmpty()) {
                 return;
@@ -154,7 +158,7 @@ public class Vault implements MaltsInventory {
     }
 
 
-    private boolean canOpen(Player player, List<Player> viewers) {
+    public State canOpen(Player player, List<Player> viewers) {
         // A vault can be opened by a player if:
         // - No other players are viewing it
         // - The player has the bypass permission
@@ -163,28 +167,35 @@ public class Vault implements MaltsInventory {
         DataSource dataSource = DataSource.getInstance();
         if (dataSource.isLocked(this.key)) {
             Text.debug("Vault " + this.key.id() + " is locked, player " + player.getName() + " cannot open it.");
-            return false;
+            return State.DATABASE_BUSY;
         }
 
         if (viewers.isEmpty()) {
             Text.debug("Vault " + this.key.id() + " has no viewers, player " + player.getName() + " can open it.");
-            return true;
+            return State.AVAILABLE;
         }
 
         if (player.hasPermission(BYPASS_OPEN_VAULT_PERM)) {
             Text.debug("Player " + player.getName() + " has bypass permission, can open vault " + this.key.id() + " despite viewers.");
-            return true;
+            return State.BYPASS_OPEN_PERMISSION;
         }
 
         for (Player viewer : viewers) {
             // If any viewer does not have bypass permission or is the owner, deny access
             if (!viewer.hasPermission(BYPASS_OPEN_VAULT_PERM) || viewer.getUniqueId().equals(this.key.owner())) {
-                return false;
+                return State.OTHER_PLAYER_VIEWING;
             }
         }
         Text.debug("All viewers of vault " + this.key.id() + " have bypass permission, player " + player.getName() + " can open it.");
-        return true;
+        return State.AVAILABLE;
     }
+
+
+    public State canOpen(Player player) {
+        List<Player> viewers = this.getViewers();
+        return canOpen(player, viewers);
+    }
+
 
     public List<Player> getViewers() {
         List<Player> viewers = new ArrayList<>();
@@ -220,6 +231,12 @@ public class Vault implements MaltsInventory {
     }
 
 
+    /**
+     * Checks to see if the player has the proper permissions to access this vault.
+     * This does not mean the vault is openable, only that the player has access rights.
+     * @param player the player to check
+     * @return true if the player can access the vault, false otherwise
+     */
     public boolean canAccess(Player player) {
         return player.getUniqueId() == this.key.owner() || this.trustedPlayers.contains(player.getUniqueId()) || player.hasPermission(BYPASS_OPEN_VAULT_PERM);
     }
@@ -234,7 +251,7 @@ public class Vault implements MaltsInventory {
      * @return true if the player was added, false if the player was already trusted or the trust cap was reached
      */
     public boolean addTrusted(UUID uuid) {
-        int cap = cfg.vaults().trustCap();
+        int cap = CONFIG.vaults().trustCap();
         VaultTrustPlayerEvent event = new VaultTrustPlayerEvent(this, EventAction.ADD, uuid, !Bukkit.isPrimaryThread());
         event.setCancelled(trustedPlayers.size() >= cap);
 
@@ -265,7 +282,7 @@ public class Vault implements MaltsInventory {
      * @return true if the name was set, false if the name was too long
      */
     public boolean setCustomName(@NotNull String customName) {
-        int maxLength = cfg.vaults().maxNameCharacters();
+        int maxLength = CONFIG.vaults().maxNameCharacters();
         VaultNameChangeEvent event = new VaultNameChangeEvent(this, customName, !Bukkit.isPrimaryThread());
         event.setCancelled(customName.length() > maxLength);
         if (!event.callEvent()) return false;
@@ -331,9 +348,18 @@ public class Vault implements MaltsInventory {
         return this.key.hashCode();
     }
 
-    public enum VaultOpenState {
-        OPEN,
-        BYPASSED,
-        CLOSED;
+    public enum State {
+        AVAILABLE, // true
+        DATABASE_BUSY, // false
+        OTHER_PLAYER_VIEWING, // false
+        BYPASS_OPEN_PERMISSION; // true
+
+        /**
+         * Converts the state to a boolean indicating if the vault can be opened.
+         * @return true if the vault can be opened, false otherwise
+         */
+        public boolean toBoolean() {
+            return this == AVAILABLE || this == BYPASS_OPEN_PERMISSION;
+        }
     }
 }

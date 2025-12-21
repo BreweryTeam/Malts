@@ -11,13 +11,13 @@ import dev.jsinco.malts.enums.QuickReturnClickType;
 import dev.jsinco.malts.enums.TriState;
 import dev.jsinco.malts.enums.WarehouseMode;
 import dev.jsinco.malts.integration.EconomyIntegration;
-import dev.jsinco.malts.obj.CachedObject;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.SnapshotVault;
-import dev.jsinco.malts.obj.Stock;
-import dev.jsinco.malts.obj.Vault;
-import dev.jsinco.malts.obj.VaultKey;
-import dev.jsinco.malts.obj.Warehouse;
+import dev.jsinco.malts.model.CachedObject;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.SnapshotVault;
+import dev.jsinco.malts.model.Stock;
+import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.VaultKey;
+import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.FileUtil;
@@ -325,6 +325,12 @@ public abstract class DataSource {
         ).findFirst().orElse(null);
     }
 
+    public <T extends CachedObject> void cacheAlreadyCompleted(T object, long expire) {
+        Preconditions.checkNotNull(object, "object cannot be null");
+        CompletableFuture<T> future = CompletableFuture.completedFuture(object);
+        cacheObjectInternal(future, expire);
+    }
+
     public <T extends CachedObject> CompletableFuture<T> cacheObjectWithDefaultExpire(CompletableFuture<T> future) {
         long expire = ConfigManager.get(Config.class).storage().defaultObjectCacheTime();
         return cacheObject(future, expire);
@@ -373,7 +379,7 @@ public abstract class DataSource {
                 //new CachedObjectEvent(this, obj, EventAction.ADD).callEvent();
             }
 
-            String expireMsg = expireTime != null ? " until " + expireTime : "";
+            String expireMsg = obj.getExpire() != null ? " until " + obj.getExpire() : "";
             Text.debug("Caching " + obj.getClass().getSimpleName() + ": " + obj.getUuid() + expireMsg);
             return CompletableFuture.completedFuture(obj);
         });

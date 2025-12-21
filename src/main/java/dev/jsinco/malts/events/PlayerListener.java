@@ -1,8 +1,8 @@
 package dev.jsinco.malts.events;
 
 import dev.jsinco.malts.integration.compiled.UpdateCheckIntegration;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.Warehouse;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Executors;

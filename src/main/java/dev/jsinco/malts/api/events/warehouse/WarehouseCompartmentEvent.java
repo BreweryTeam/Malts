@@ -2,7 +2,7 @@ package dev.jsinco.malts.api.events.warehouse;
 
 import dev.jsinco.malts.api.events.interfaces.EventAction;
 import dev.jsinco.malts.api.events.interfaces.WarehouseEvent;
-import dev.jsinco.malts.obj.Warehouse;
+import dev.jsinco.malts.model.Warehouse;
 import org.bukkit.Material;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;

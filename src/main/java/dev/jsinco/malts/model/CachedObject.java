@@ -1,4 +1,4 @@
-package dev.jsinco.malts.obj;
+package dev.jsinco.malts.model;
 
 import dev.jsinco.malts.storage.DataSource;
 import org.jetbrains.annotations.NotNull;

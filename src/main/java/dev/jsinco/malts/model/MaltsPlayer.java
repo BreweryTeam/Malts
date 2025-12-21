@@ -1,4 +1,4 @@
-package dev.jsinco.malts.obj;
+package dev.jsinco.malts.model;
 
 import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.configuration.ConfigManager;
@@ -26,7 +26,7 @@ public class MaltsPlayer implements CachedObject {
     private static final String MAX_VAULTS_PERMISSION_PREFIX = "malts.maxvaults";
     private static final String MAX_WAREHOUSE_STOCK_PERMISSION_PREFIX = "malts.maxstock";
 
-    private static final Config cfg = ConfigManager.get(Config.class);
+    private static final Config CONFIG = ConfigManager.get(Config.class);
 
     private Long expire;
 
@@ -42,7 +42,7 @@ public class MaltsPlayer implements CachedObject {
         this.maxVaults = 0;
         this.maxWarehouseStock = 0;
         this.warehouseMode = WarehouseMode.NONE;
-        this.quickReturnClickType = cfg.quickReturn().defaultClickType();
+        this.quickReturnClickType = CONFIG.quickReturn().defaultClickType();
     }
 
     public MaltsPlayer(@NotNull UUID uuid, int maxVaults, int maxWarehouseStock, WarehouseMode warehouseMode, QuickReturnClickType quickReturnClickType) {
@@ -50,7 +50,7 @@ public class MaltsPlayer implements CachedObject {
         this.maxVaults = maxVaults;
         this.maxWarehouseStock = maxWarehouseStock;
         this.warehouseMode = warehouseMode == null ? WarehouseMode.NONE : warehouseMode;
-        this.quickReturnClickType = quickReturnClickType == null ? cfg.quickReturn().defaultClickType() : quickReturnClickType;
+        this.quickReturnClickType = quickReturnClickType == null ? CONFIG.quickReturn().defaultClickType() : quickReturnClickType;
     }
 
     @Nullable
@@ -70,13 +70,13 @@ public class MaltsPlayer implements CachedObject {
     public int getCalculatedMaxVaults() {
         int maxByPermission = getMaxByPermission(MAX_VAULTS_PERMISSION_PREFIX);
 
-        return maxByPermission + maxVaults + cfg.vaults().defaultMaxVaults();
+        return maxByPermission + maxVaults + CONFIG.vaults().defaultMaxVaults();
     }
 
     public int getCalculatedMaxWarehouseStock() {
         int maxByPermission = getMaxByPermission(MAX_WAREHOUSE_STOCK_PERMISSION_PREFIX);
 
-        return maxByPermission + maxWarehouseStock + cfg.warehouse().defaultMaxStock();
+        return maxByPermission + maxWarehouseStock + CONFIG.warehouse().defaultMaxStock();
     }
 
     private int getMaxByPermission(String permissionPrefix) {

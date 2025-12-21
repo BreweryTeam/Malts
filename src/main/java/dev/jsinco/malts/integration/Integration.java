@@ -8,6 +8,10 @@ public interface Integration extends RegistryItem {
 
     void register();
 
+    default void unregister() {
+        // Optional unregister method
+    }
+
 
     /**
      * An integration compiled into Malts

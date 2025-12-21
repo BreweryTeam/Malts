@@ -14,7 +14,7 @@ import java.util.List;
 
 public class MaxCommand implements SubCommand {
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.size() < 4) {
             return false;
         }
@@ -42,10 +42,10 @@ public class MaxCommand implements SubCommand {
                     maltsPlayer.setMaxWarehouseStock(newMax);
                     calculatedMax = maltsPlayer.getCalculatedMaxWarehouseStock();
                 } else {
-                    lng.entry(l -> l.command().max().invalidType(), sender);
+                    LANG.entry(l -> l.command().max().invalidType(), sender);
                     return;
                 }
-                lng.entry(l -> l.command().max().success(),
+                LANG.entry(l -> l.command().max().success(),
                         sender,
                         Couple.of("{type}", type),
                         Couple.of("{name}", target.getName()),
@@ -60,7 +60,7 @@ public class MaxCommand implements SubCommand {
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         return switch (args.size()) {
             case 1 -> List.of("vaults", "stock");
             case 2 -> Arrays.stream(Operation.values()).map(Enum::toString).toList();

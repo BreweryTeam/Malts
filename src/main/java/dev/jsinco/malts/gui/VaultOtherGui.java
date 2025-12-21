@@ -5,9 +5,9 @@ import dev.jsinco.malts.configuration.files.GuiConfig;
 import dev.jsinco.malts.configuration.IntPair;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.gui.item.GuiItem;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.OtherPlayerSnapshotVault;
-import dev.jsinco.malts.obj.SnapshotVault;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.OtherPlayerSnapshotVault;
+import dev.jsinco.malts.model.SnapshotVault;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Executors;
@@ -26,8 +26,8 @@ import java.util.concurrent.CompletableFuture;
 
 public class VaultOtherGui extends MaltsGui implements PromisedInventory {
 
-    private static final GuiConfig cfg = ConfigManager.get(GuiConfig.class);
-    private static final Lang lng = ConfigManager.get(Lang.class);
+    private static final GuiConfig GUI_CONFIG = ConfigManager.get(GuiConfig.class);
+    private static final Lang LANG = ConfigManager.get(Lang.class);
 
     private PaginatedGui paginatedGui;
 
@@ -35,11 +35,11 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
     private final OfflinePlayer target;
 
     private final GuiItem previousPage = GuiItem.builder()
-            .index(() -> cfg.vaultOtherGui().previousPage().slot())
+            .index(() -> GUI_CONFIG.vaultOtherGui().previousPage().slot())
             .itemStack(b -> b
-                    .displayName(cfg.vaultOtherGui().previousPage().title())
-                    .material(cfg.vaultOtherGui().previousPage().material())
-                    .lore(cfg.vaultOtherGui().previousPage().lore())
+                    .displayName(GUI_CONFIG.vaultOtherGui().previousPage().title())
+                    .material(GUI_CONFIG.vaultOtherGui().previousPage().material())
+                    .lore(GUI_CONFIG.vaultOtherGui().previousPage().lore())
             )
             .action(e -> {
                 Player player = (Player) e.getWhoClicked();
@@ -48,16 +48,16 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
                 if (inv != null) {
                     player.openInventory(inv);
                 } else {
-                    lng.entry(l -> l.gui().firstPage(), player);
+                    LANG.entry(l -> l.gui().firstPage(), player);
                 }
             })
             .build();
     private final GuiItem nextPage = GuiItem.builder()
-            .index(() -> cfg.vaultOtherGui().nextPage().slot())
+            .index(() -> GUI_CONFIG.vaultOtherGui().nextPage().slot())
             .itemStack(b -> b
-                    .displayName(cfg.vaultOtherGui().nextPage().title())
-                    .material(cfg.vaultOtherGui().nextPage().material())
-                    .lore(cfg.vaultOtherGui().nextPage().lore())
+                    .displayName(GUI_CONFIG.vaultOtherGui().nextPage().title())
+                    .material(GUI_CONFIG.vaultOtherGui().nextPage().material())
+                    .lore(GUI_CONFIG.vaultOtherGui().nextPage().lore())
             )
             .action(e -> {
                 Player player = (Player) e.getWhoClicked();
@@ -66,7 +66,7 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
                 if (inv != null) {
                     player.openInventory(inv);
                 } else {
-                    lng.entry(l -> l.gui().lastPage(), player);
+                    LANG.entry(l -> l.gui().lastPage(), player);
                 }
             })
             .build();
@@ -74,15 +74,15 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
 
 
     public VaultOtherGui(Player viewer, OfflinePlayer target) {
-        super(cfg.vaultOtherGui().title(), cfg.vaultOtherGui().size());
+        super(GUI_CONFIG.vaultOtherGui().title(), GUI_CONFIG.vaultOtherGui().size());
         this.viewer = viewer;
         this.target = target;
 
         this.autoRegister(false);
 
-        IntPair slots = cfg.vaultOtherGui().vaultItem().slots();
-        List<Integer> ignoredSlots = cfg.vaultOtherGui().vaultItem().ignoredSlots();
-        if (cfg.vaultOtherGui().borders()) {
+        IntPair slots = GUI_CONFIG.vaultOtherGui().vaultItem().slots();
+        List<Integer> ignoredSlots = GUI_CONFIG.vaultOtherGui().vaultItem().ignoredSlots();
+        if (GUI_CONFIG.vaultOtherGui().borders()) {
             for (int i = 0; i < this.inventory.getSize(); i++) {
                 ItemStack itemStack = this.inventory.getItem(i);
                 if (itemStack != null || (slots.includes(i) && !ignoredSlots.contains(i))) continue;
@@ -101,7 +101,7 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
         DataSource dataSource = DataSource.getInstance();
         return dataSource.getVaults(target.getUniqueId()).thenCompose(unfilteredSnapshotVaults -> {
             if (unfilteredSnapshotVaults.isEmpty()) {
-                lng.entry(l -> l.vaults().noVaultsFound(), viewer, Couple.of("{name}", targetName()));
+                LANG.entry(l -> l.vaults().noVaultsFound(), viewer, Couple.of("{name}", targetName()));
                 return CompletableFuture.completedFuture(null);
             }
 
@@ -112,7 +112,7 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
                     .toList();
 
             if (snapshotVaults.isEmpty()) {
-                lng.entry(l -> l.vaults().noVaultsAccessible(), viewer, Couple.of("{name}", targetName()));
+                LANG.entry(l -> l.vaults().noVaultsAccessible(), viewer, Couple.of("{name}", targetName()));
                 return CompletableFuture.completedFuture(null);
             }
 
@@ -129,12 +129,12 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
                     itemStacks.add(snapshotVault.getItemStack());
                 }
 
-                IntPair slots = cfg.vaultOtherGui().vaultItem().slots();
+                IntPair slots = GUI_CONFIG.vaultOtherGui().vaultItem().slots();
                 this.paginatedGui = PaginatedGui.builder()
-                        .name(cfg.vaultOtherGui().title().replace("{name}", targetName()))
+                        .name(GUI_CONFIG.vaultOtherGui().title().replace("{name}", targetName()))
                         .items(itemStacks)
                         .startEndSlots(slots.a(), slots.b())
-                        .ignoredSlots(cfg.vaultOtherGui().vaultItem().ignoredSlots())
+                        .ignoredSlots(GUI_CONFIG.vaultOtherGui().vaultItem().ignoredSlots())
                         .base(this.inventory)
                         .build();
 

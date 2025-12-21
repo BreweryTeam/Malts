@@ -2,11 +2,11 @@ package dev.jsinco.malts.storage.sources;
 
 import com.zaxxer.hikari.HikariConfig;
 import dev.jsinco.malts.configuration.files.Config;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.SnapshotVault;
-import dev.jsinco.malts.obj.Stock;
-import dev.jsinco.malts.obj.Vault;
-import dev.jsinco.malts.obj.Warehouse;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.SnapshotVault;
+import dev.jsinco.malts.model.Stock;
+import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Text;
@@ -88,7 +88,7 @@ public class SQLiteDataSource extends DataSource {
 
                 return this.mapVault(resultSet, owner, id, createIfNull);
             }
-        });
+        }, singleThread);
     }
 
     @Override
@@ -118,7 +118,7 @@ public class SQLiteDataSource extends DataSource {
                 ResultSet resultSet = statement.executeQuery();
                 return this.mapSnapshotVaults(resultSet, owner);
             }
-        });
+        }, singleThread);
     }
 
     @Override
@@ -206,7 +206,7 @@ public class SQLiteDataSource extends DataSource {
                 }
                 return vaultNames;
             }
-        });
+        }, singleThread);
     }
 
     @Override
@@ -223,7 +223,7 @@ public class SQLiteDataSource extends DataSource {
                 ResultSet resultSet = warehouseStatement.executeQuery();
                 return this.mapWarehouse(resultSet, owner);
             }
-        });
+        }, singleThread);
     }
 
     @Override
@@ -287,7 +287,7 @@ public class SQLiteDataSource extends DataSource {
                 ResultSet resultSet = statement.executeQuery();
                 return this.mapMaltsPlayer(resultSet, uuid);
             }
-        });
+        }, singleThread);
     }
 
 
@@ -322,7 +322,7 @@ public class SQLiteDataSource extends DataSource {
                 }
                 return 0;
             }
-        });
+        }, singleThread);
     }
 
     @Override
@@ -338,6 +338,6 @@ public class SQLiteDataSource extends DataSource {
                 }
                 return 0;
             }
-        });
+        }, singleThread);
     }
 }

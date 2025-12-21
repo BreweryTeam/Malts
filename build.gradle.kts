@@ -23,12 +23,10 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://repo.jsinco.dev/releases")
     maven("https://storehouse.okaeri.eu/repository/maven-public/")
-    maven("https://repo.codemc.io/repository/maven-public/")
-    maven("https://maven.enginehub.org/repo/")
-    maven("https://repo.glaremasters.me/repository/towny/")
     maven("https://maven.playpro.com/")
     maven("https://jitpack.io")
     maven("https://repo.rosewooddev.io/repository/public/")
+    maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
 }
 
 dependencies {
@@ -36,15 +34,6 @@ dependencies {
     compileOnly("org.xerial:sqlite-jdbc:3.47.2.0") // mavenCentral
     compileOnly("org.jetbrains:annotations:26.0.2-1") // mavenCentral
     compileOnly("com.drtshock.playervaults:PlayerVaultsX:4.4.7") // repo.jsinco.dev
-    compileOnly("org.popcraft:bolt-bukkit:1.1.33") /* repo.codemc.io */ {
-        artifact { classifier = "" }
-    }
-    compileOnly("com.griefcraft:lwc:2.2.9-dev") // repo.codemc.io
-    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.9-beta1") // maven.enginehub.org
-    compileOnly("com.sk89q.worldguard:worldguard-core:7.0.9-beta1") // maven.enginehub.org
-    compileOnly("com.palmergames.bukkit.towny:towny:0.101.2.0") /* repo.glaremasters.me */ {
-        exclude(group = "com.palmergames.adventure")
-    }
     compileOnly("net.coreprotect:coreprotect:23.0") // maven.playpro.com
     compileOnly("com.github.MilkBowl:VaultAPI:1.7") /* jitpack.io */ {
         exclude(group = "org.bukkit")
@@ -53,6 +42,7 @@ dependencies {
     compileOnly("com.artillexstudios.axvaults:AxVaults:2.10.1") /* repo.jsinco.dev */ {
         exclude(group = "org.jetbrains", module = "annotations")
     }
+    compileOnly("me.clip:placeholderapi:2.11.7") // repo.extendedclip.com
 
 
     implementation("com.zaxxer:HikariCP:6.3.0") // mavenCentral
@@ -75,6 +65,9 @@ tasks {
 
     runServer {
         minecraftVersion("1.21.10")
+        downloadPlugins {
+            modrinth("placeholderapi", "2.11.7")
+        }
     }
 
     test {

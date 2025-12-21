@@ -1,11 +1,10 @@
-package dev.jsinco.malts.obj;
+package dev.jsinco.malts.model;
 
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.utility.ItemStacks;
 import org.bukkit.Material;
 import org.bukkit.inventory.Inventory;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.MockBukkitExtension;

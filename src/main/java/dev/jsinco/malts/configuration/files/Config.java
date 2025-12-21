@@ -6,6 +6,9 @@ import dev.jsinco.malts.enums.Driver;
 import dev.jsinco.malts.enums.EconomyProvider;
 import dev.jsinco.malts.enums.QuickReturnClickType;
 import dev.jsinco.malts.enums.WarehouseMode;
+import dev.jsinco.malts.integration.Integration;
+import dev.jsinco.malts.registry.Registry;
+import dev.jsinco.malts.registry.RegistryItem;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import lombok.Getter;
@@ -14,6 +17,7 @@ import org.bukkit.Material;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 @Getter
@@ -65,7 +69,7 @@ public class Config extends OkaeriFile {
 
     @Comment({
             "These are the Malts storage settings. All tables are prefixed",
-            "with 'malts_' on both SQLite and MySQL to ensure uniqueness."
+            "with 'malts_' on both SQLite and MariaDB to ensure uniqueness."
     })
     private Storage storage = new Storage();
     @Getter
@@ -83,8 +87,8 @@ public class Config extends OkaeriFile {
                 "change storage methods, you will need to do so manually using",
                 "SQL editors or phpMyAdmin for importing & exporting.",
                 " ",
-                "* Your available options are: SQLITE, MYSQL",
-                "If you choose to use MYSQL as your storage method",
+                "* Your available options are: SQLite, MariaDB",
+                "If you choose to use MariaDB as your storage method",
                 "you must configure your connection details."
         })
         private Driver driver = Driver.SQLITE;
@@ -101,6 +105,18 @@ public class Config extends OkaeriFile {
         private String password = "password";
 
         private String jdbcFlags = "?useSSL=false&verifyServerCertificate=false&useUnicode=true&characterEncoding=utf-8";
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            Storage storage = (Storage) o;
+            return defaultObjectCacheTime == storage.defaultObjectCacheTime && port == storage.port && driver == storage.driver && Objects.equals(database, storage.database) && Objects.equals(host, storage.host) && Objects.equals(username, storage.username) && Objects.equals(password, storage.password) && Objects.equals(jdbcFlags, storage.jdbcFlags);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(defaultObjectCacheTime, driver, database, host, port, username, password, jdbcFlags);
+        }
     }
 
     private Vaults vaults = new Vaults();
@@ -147,7 +163,7 @@ public class Config extends OkaeriFile {
                 "'malts.maxvaults.<amount>' permissions.",
                 "Or, by using '/malts max vaults add <player> <amount>'.",
         })
-        private int defaultMaxVaults = 0;
+        private int defaultMaxVaults = 5;
     }
 
 
@@ -204,7 +220,7 @@ public class Config extends OkaeriFile {
                 "'malts.maxstock.<amount>' permissions.",
                 "Or, by using '/malts max stock add <player> <amount>'.",
         })
-        private int defaultMaxStock = 0;
+        private int defaultMaxStock = 1000;
     }
 
     private Economy economy = new Economy();

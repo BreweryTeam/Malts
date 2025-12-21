@@ -13,9 +13,10 @@ import dev.jsinco.malts.events.PlayerListener;
 import dev.jsinco.malts.events.VaultListener;
 import dev.jsinco.malts.events.WarehouseListener;
 import dev.jsinco.malts.integration.Integration;
-import dev.jsinco.malts.obj.MaltsInventory;
+import dev.jsinco.malts.model.MaltsInventory;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
+import dev.jsinco.malts.utility.ExceptionUtil;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.entity.Player;
@@ -62,6 +63,10 @@ public class Malts extends JavaPlugin {
     public void onDisable() {
         shutdown = true;
         DataSource dataSource = DataSource.getInstance();
+
+        Registry.INTEGRATIONS.values().forEach(integration ->
+                ExceptionUtil.unsafe(integration::unregister)
+        );
 
 
         for (Player player : getServer().getOnlinePlayers()) {

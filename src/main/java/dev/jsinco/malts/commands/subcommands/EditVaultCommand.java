@@ -5,9 +5,9 @@ import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Config;
-import dev.jsinco.malts.obj.CachedObject;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.Vault;
+import dev.jsinco.malts.model.CachedObject;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Util;
@@ -39,7 +39,7 @@ public class EditVaultCommand implements SubCommand {
             .toList();
 
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.size() < 2) return false;
 
         Player player = (Player) sender;
@@ -53,14 +53,14 @@ public class EditVaultCommand implements SubCommand {
         dataSource.getVaultWithEconomy(player, vaultId, vault -> {
             boolean result = option.getExecutor().handle(dataSource, player, vault, newArgs);
             if (!result) {
-                lng.entry(l -> l.command().base().invalidUsage(), sender);
+                LANG.entry(l -> l.command().base().invalidUsage(), sender);
             }
         });
         return true;
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         if (!(sender instanceof Player player)) return List.of();
         return switch (args.size()) {
             case 1 -> {
@@ -111,10 +111,10 @@ public class EditVaultCommand implements SubCommand {
             int maxLength = ConfigManager.get(Config.class).vaults().maxNameCharacters();
 
             if (vault.setCustomName(newName)) {
-                lng.entry(l -> l.vaults().nameChanged(), sender, Couple.of("{vaultName}", newName));
+                LANG.entry(l -> l.vaults().nameChanged(), sender, Couple.of("{vaultName}", newName));
                 dataSource.saveVault(vault);
             } else {
-                lng.entry(l -> l.vaults().vaultNameTooLong(), sender, Couple.of("{maxLength}", maxLength));
+                LANG.entry(l -> l.vaults().vaultNameTooLong(), sender, Couple.of("{maxLength}", maxLength));
             }
             return true;
         }, (sender, vaultId) -> List.of()),
@@ -127,7 +127,7 @@ public class EditVaultCommand implements SubCommand {
             if (!vault.setIcon(material)) return false;
 
             dataSource.saveVault(vault);
-            lng.entry(l -> l.vaults().iconChanged(), sender, Couple.of("{material}", Util.formatEnumerator(material)));
+            LANG.entry(l -> l.vaults().iconChanged(), sender, Couple.of("{material}", Util.formatEnumerator(material)));
             return true;
         }), (sender, vaultId) -> ICON_MATERIAL_NAMES),
         TRUST((dataSource, sender, vault, args) -> {
@@ -138,20 +138,20 @@ public class EditVaultCommand implements SubCommand {
             UUID playerUUID = offlinePlayer.getUniqueId();
             int trustListCap = ConfigManager.get(Config.class).vaults().trustCap();
             if (!offlinePlayer.hasPlayedBefore()) {
-                lng.entry(l -> l.vaults().playerNeverOnServer(), sender, Couple.of("{name}", name));
+                LANG.entry(l -> l.vaults().playerNeverOnServer(), sender, Couple.of("{name}", name));
                 return true;
             }
 
             if (vault.isTrusted(playerUUID)) {
                 if (vault.removeTrusted(playerUUID)) {
-                    lng.entry(l -> l.vaults().playerUntrusted(), sender, Couple.of("{name}", name));
+                    LANG.entry(l -> l.vaults().playerUntrusted(), sender, Couple.of("{name}", name));
                 } else {
-                    lng.entry(l -> l.vaults().playerNotTrusted(), sender, Couple.of("{name}", name));
+                    LANG.entry(l -> l.vaults().playerNotTrusted(), sender, Couple.of("{name}", name));
                 }
             } else if (vault.addTrusted(playerUUID)){
-                lng.entry(l -> l.vaults().playerTrusted(), sender, Couple.of("{name}", name));
+                LANG.entry(l -> l.vaults().playerTrusted(), sender, Couple.of("{name}", name));
             } else {
-                lng.entry(l -> l.vaults().trustListMaxed(), sender, Couple.of("{trustedListSize}", trustListCap));
+                LANG.entry(l -> l.vaults().trustListMaxed(), sender, Couple.of("{trustedListSize}", trustListCap));
             }
 
             dataSource.saveVault(vault);
