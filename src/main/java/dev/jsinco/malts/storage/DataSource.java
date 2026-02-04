@@ -38,6 +38,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -165,12 +166,15 @@ public abstract class DataSource {
     }
 
     public String[] getStatements(String path) {
-        String[] statements = FileUtil.readInternalResource("sql/" + path).split(";");
-        // re-append the semicolon to each statement
-        for (int i = 0; i < statements.length; i++) {
-            statements[i] = statements[i].trim() + ";";
-        }
-        return statements;
+        String raw = FileUtil.readInternalResource("sql/" + path);
+
+        // Split on semicolons, drop empty fragments, and ensure each statement ends with a semicolon.
+        // Prevents executing a lone ";" which MySQL treats as an empty query.
+        return Arrays.stream(raw.split(";"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> s.endsWith(";") ? s : s + ";")
+                .toArray(String[]::new);
     }
 
     public String getStatement(String path) {
@@ -321,7 +325,7 @@ public abstract class DataSource {
 
 
         return (T) cachedObjects.stream().filter(it ->
-            it.getClass().equals(objectClass) && it.getUuid().equals(uuid)
+                it.getClass().equals(objectClass) && it.getUuid().equals(uuid)
         ).findFirst().orElse(null);
     }
 
