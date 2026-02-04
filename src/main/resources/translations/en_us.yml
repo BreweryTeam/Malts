@@ -84,7 +84,6 @@ command:
     startImport: Importing vaults from {importer}... (This might take a while!)
     importComplete: Imported vaults from {amount} players with {failedAmount} failures.
     failedImport: 'Failed: {uuid} -> {result}'
-    confirmImport: "Are you sure you want to import vaults from <yellow>{importer}</yellow>? This action is non-destructive but may not be easily un-done. Type <hover:show_text:'Click to run.'><click:suggest_command:'/malts import {importer} confirm'><aqua>/malts import {importer} confirm</aqua></click></hover> to confirm."
   vaultOther:
     noVaultFound: Vault {id} does not exist for {name}.
   reload:

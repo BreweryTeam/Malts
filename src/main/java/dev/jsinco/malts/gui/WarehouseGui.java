@@ -111,7 +111,7 @@ public class WarehouseGui extends MaltsGui {
                     if (nextMode == mode) return;
 
                     maltsPlayer.setWarehouseMode(nextMode);
-                    event.getInventory().setItem(cfg.warehouseGui().managerButton().slot(), self.getItemStack(false));
+                    event.getInventory().setItem(cfg.warehouseGui().managerButton().slot(), self.getItemStack());
                     lng.entry(l -> l.warehouse().changedMode(), player, Couple.of("{mode}", Util.formatEnumerator(maltsPlayer.getWarehouseMode())));
                     return;
                 }

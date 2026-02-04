@@ -26,4 +26,4 @@ CREATE TABLE IF NOT EXISTS malts_warehouses(
 );
 
 -- Migration code
-ALTER TABLE malts_players ADD COLUMN IF NOT EXISTS quick_return_click_type TEXT;
+ALTER TABLE malts_players ADD COLUMN quick_return_click_type TEXT;

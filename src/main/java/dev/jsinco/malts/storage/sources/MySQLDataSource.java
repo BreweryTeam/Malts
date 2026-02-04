@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -49,11 +50,53 @@ public class MySQLDataSource extends DataSource {
         return Executors.supplyAsyncWithSQLException(() -> {
             try (Connection connection = this.connection()) {
                 for (String statement : this.getStatements("tables/mysql/create_tables.sql")) {
-                    connection.prepareStatement(statement).execute();
+
+                    // 1) 兼容：去掉 SQL 里的单行注释（否则 statement 可能以 "-- Migration code" 开头）
+                    String cleaned = statement == null ? "" : statement
+                            .replaceAll("(?m)^\\s*--.*$", "")   // remove "-- ..." lines
+                            .trim();
+
+                    if (cleaned.isEmpty()) continue;
+
+                    // 2) 兼容：MySQL 不支持 "ADD COLUMN IF NOT EXISTS"
+                    String stmt = cleaned.replaceAll(
+                            "(?i)ADD\\s+COLUMN\\s+IF\\s+NOT\\s+EXISTS",
+                            "ADD COLUMN"
+                    );
+
+                    try (PreparedStatement ps = connection.prepareStatement(stmt)) {
+                        ps.execute();
+                    } catch (SQLException ex) {
+                        // 注意：这里传 cleaned 或 stmt 都行，但要保证不是带 "--" 注释的原字符串
+                        if (shouldIgnoreSchemaMigrationError(stmt, ex)) {
+                            Text.debug("Ignored schema migration error: " + ex.getMessage());
+                            continue;
+                        }
+                        throw ex;
+                    }
                 }
             }
             return null;
         });
+    }
+
+    private static boolean shouldIgnoreSchemaMigrationError(String statement, SQLException ex) {
+        String u = statement == null ? "" : statement.trim().toUpperCase();
+
+        // 只对 “ALTER TABLE ... ADD COLUMN quick_return_click_type ...” 容错
+        if (!u.contains("ALTER TABLE") || !u.contains("ADD") || !u.contains("COLUMN")) return false;
+        if (!u.contains("QUICK_RETURN_CLICK_TYPE")) return false;
+
+        // MySQL: ER_DUP_FIELDNAME = 1060, SQLState = 42S21
+        if (ex.getErrorCode() == 1060) return true;
+        if ("42S21".equals(ex.getSQLState())) return true;
+
+        String msg = ex.getMessage();
+        if (msg != null) {
+            String lower = msg.toLowerCase();
+            return lower.contains("duplicate column");
+        }
+        return false;
     }
 
     @Override
@@ -81,7 +124,6 @@ public class MySQLDataSource extends DataSource {
                 statement.setString(1, owner.toString());
                 statement.setString(2, customName);
                 ResultSet resultSet = statement.executeQuery();
-
                 return this.mapVault(resultSet, owner);
             }
         });
@@ -131,8 +173,6 @@ public class MySQLDataSource extends DataSource {
                 statement.setString(1, owner.toString());
                 statement.setInt(2, id);
                 int rowsAffected = statement.executeUpdate();
-
-
                 Text.debug("Attempted to delete vault: " + owner + " #" + id);
                 return rowsAffected > 0;
             }
@@ -161,7 +201,6 @@ public class MySQLDataSource extends DataSource {
                 PreparedStatement statement = connection.prepareStatement(
                         this.getStatement("vaults/select_all_vaults.sql")
                 );
-
                 ResultSet resultSet = statement.executeQuery();
                 return this.mapVaults(resultSet);
             }
@@ -175,9 +214,7 @@ public class MySQLDataSource extends DataSource {
                 PreparedStatement statement = connection.prepareStatement(
                         this.getStatement("vaults/select_vault_names.sql")
                 );
-
                 statement.setString(1, owner.toString());
-
                 ResultSet resultSet = statement.executeQuery();
                 List<String> vaultNames = new ArrayList<>();
                 while (resultSet.next()) {
@@ -193,13 +230,10 @@ public class MySQLDataSource extends DataSource {
     public CompletableFuture<@NotNull Warehouse> getWarehouse(UUID owner) {
         return Executors.supplyAsyncWithSQLException(() -> {
             try (Connection connection = this.connection()) {
-
                 PreparedStatement warehouseStatement = connection.prepareStatement(
                         this.getStatement("warehouses/select_warehouse.sql")
                 );
-
                 warehouseStatement.setString(1, owner.toString());
-
                 ResultSet resultSet = warehouseStatement.executeQuery();
                 return this.mapWarehouse(resultSet, owner);
             }
@@ -250,6 +284,7 @@ public class MySQLDataSource extends DataSource {
                     }
                 }
             }
+
             Text.debug("Saved warehouse: " + warehouse.getOwner());
             return null;
         });

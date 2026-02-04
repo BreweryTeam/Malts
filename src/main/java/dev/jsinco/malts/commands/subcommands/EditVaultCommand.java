@@ -136,10 +136,7 @@ public class EditVaultCommand implements SubCommand {
             String name = args.getFirst();
             OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(name);
             UUID playerUUID = offlinePlayer.getUniqueId();
-            MaltsPlayer ownerMaltsPlayer = dataSource.cachedObject(vault.getOwner(), MaltsPlayer.class);
-            Preconditions.checkNotNull(ownerMaltsPlayer, "MaltsPlayer should not be null for vault owner.");
-
-            int trustListCap = ownerMaltsPlayer.getTrustCapacity();
+            int trustListCap = ConfigManager.get(Config.class).vaults().trustCap();
             if (!offlinePlayer.hasPlayedBefore()) {
                 lng.entry(l -> l.vaults().playerNeverOnServer(), sender, Couple.of("{name}", name));
                 return true;
@@ -151,7 +148,7 @@ public class EditVaultCommand implements SubCommand {
                 } else {
                     lng.entry(l -> l.vaults().playerNotTrusted(), sender, Couple.of("{name}", name));
                 }
-            } else if (vault.addTrusted(ownerMaltsPlayer, playerUUID)){
+            } else if (vault.addTrusted(playerUUID)){
                 lng.entry(l -> l.vaults().playerTrusted(), sender, Couple.of("{name}", name));
             } else {
                 lng.entry(l -> l.vaults().trustListMaxed(), sender, Couple.of("{trustedListSize}", trustListCap));

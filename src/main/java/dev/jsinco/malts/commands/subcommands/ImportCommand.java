@@ -1,6 +1,5 @@
 package dev.jsinco.malts.commands.subcommands;
 
-import com.google.common.base.Preconditions;
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.api.events.ImportEvent;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
@@ -18,9 +17,6 @@ import java.util.stream.Collectors;
 import static dev.jsinco.malts.utility.Text.CONSOLE;
 
 public class ImportCommand implements SubCommand {
-
-    private static final String CONFIRMATION = "confirm";
-
 
     @Override
     public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
@@ -42,16 +38,7 @@ public class ImportCommand implements SubCommand {
             return true;
         }
 
-        Importer importer = Preconditions.checkNotNull(event.getImporter(), "Importer is null after event call.");
-
-        if (!args.contains(CONFIRMATION)) {
-            lng.entry(l -> l.command()._import().confirmImport(),
-                    sender,
-                    Couple.of("{importer}", importerName)
-            );
-            return true;
-        }
-
+        Importer importer = event.getImporter();
 
         lng.entry(l -> l.command()._import().startImport(),
                 List.of(sender, CONSOLE),
@@ -83,9 +70,6 @@ public class ImportCommand implements SubCommand {
 
     @Override
     public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
-        if (args.size() > 1) {
-            return List.of();
-        }
         return List.copyOf(Registry.IMPORTERS.keySet());
     }
 

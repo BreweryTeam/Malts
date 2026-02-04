@@ -1,6 +1,5 @@
 package dev.jsinco.malts.enums;
 
-import com.google.common.base.Preconditions;
 import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.configuration.files.Lang;
@@ -13,7 +12,6 @@ import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Util;
 import io.papermc.paper.block.TileStateInventoryHolder;
-import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Item;
@@ -23,7 +21,6 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerAttemptPickupItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -117,32 +114,22 @@ public enum WarehouseMode {
 
     // Automatically refills the player's inventory from warehouse stock when items run low. (Consuming or building.)
     AUTO_REPLENISH(List.of(BlockPlaceEvent.class, PlayerItemConsumeEvent.class), (event, maltsPlayer, warehouse) -> {
+        ItemStack itemInHand;
         Player player;
-        ItemStack originalItemStack;
-        EquipmentSlot hand;
 
-        // These two events don't have a common parent
         if (event instanceof BlockPlaceEvent e) {
+            itemInHand = e.getItemInHand();
             player = e.getPlayer();
-            originalItemStack = e.getItemInHand();
-            hand = e.getHand();
         } else if (event instanceof PlayerItemConsumeEvent e) {
+            itemInHand = e.getItem();
             player = e.getPlayer();
-            originalItemStack = e.getItem();
-            hand = e.getHand();
         } else {
             throw new IllegalStateException("Unexpected event type.");
         }
 
-        Material material = originalItemStack.getType();
+        Material material = itemInHand.getType();
 
-        if (originalItemStack.getAmount() > 2 || !warehouse.hasCompartment(material) || player.getGameMode() == GameMode.CREATIVE) {
-            return;
-        }
-
-        Executors.delayedSync(1, () -> {
-            ItemStack itemInHand = player.getInventory().getItem(hand);
-
+        if (itemInHand.getAmount() < 2 && warehouse.hasCompartment(material)) {
             ItemStack item = warehouse.destockItem(material, itemInHand.getMaxStackSize() - itemInHand.getAmount());
             if (item == null) {
                 return;
@@ -153,12 +140,11 @@ public enum WarehouseMode {
                     Couple.of("{amount}", item.getAmount()),
                     Couple.of("{stock}", warehouse.getQuantity(material))
             );
-        });
+        }
     }),
     NONE(List.of(), ((event, maltsPlayer, warehouse) -> {
         // Do nothing
     }));
-
 
     private final List<Class<? extends  Event>> eventClasses;
     private final Handler<? extends Event> handler;
@@ -183,9 +169,7 @@ public enum WarehouseMode {
 
     @SuppressWarnings("unchecked") // We suppress here since we trust enum construction to match event types
     public <T extends Event> void handle(T event, MaltsPlayer maltsPlayer, Player player) {
-        List<String> disabledWorlds = ConfigManager.get(Config.class).warehouse().disableModesInWorlds();
-
-        if (this == NONE || disabledWorlds.contains(player.getWorld().getName()) || !this.eventClasses.contains(event.getClass())) {
+        if (this == NONE || !this.eventClasses.contains(event.getClass())) {
             return;
         } else if (!player.hasPermission(this.getPermission()) || !getEnabledModes().contains(this)) {
             WarehouseMode newMode = getNextMode(this, player);
@@ -196,8 +180,9 @@ public enum WarehouseMode {
         DataSource dataSource = DataSource.getInstance();
         Warehouse warehouse = dataSource.cachedObject(maltsPlayer.getUuid(), Warehouse.class);
 
-        Preconditions.checkNotNull(warehouse, "Warehouse is not cached.");
-
+        if (warehouse == null) {
+            throw new IllegalStateException("Warehouse is not cached.");
+        }
         ((Handler<T>) handler).handle(event, maltsPlayer, warehouse);
     }
 

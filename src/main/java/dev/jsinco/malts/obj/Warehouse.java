@@ -114,24 +114,16 @@ public class Warehouse implements CachedObject {
 
         if (!event.callEvent()) {
             return null;
+        } else if (event.getAmount() < amt) {
+            amt = event.getAmount();
         }
-
-        // Full clamp against event and zero
-        amt = Math.clamp(amt, 0, event.getAmount());
 
         if (amt < 1) {
             return null;
         }
 
-        // Final safety clamp against current stock
-        final int finalAmt = Math.min(amt, stock.getAmount());
-
-        if (finalAmt < 1) {
-            return null;
-        }
-
-        stock.decrease(finalAmt);
-        return ItemStack.of(material, finalAmt);
+        stock.decrease(amt);
+        return ItemStack.of(material, amt);
     }
 
     public boolean canStock(Material material) {

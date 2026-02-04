@@ -16,7 +16,7 @@ plugins {
 }
 
 group = "dev.jsinco.malts"
-version = "1.0.3"
+version = "1.0.2"
 
 repositories {
     mavenCentral()
@@ -74,10 +74,7 @@ dependencies {
 tasks {
 
     runServer {
-        minecraftVersion("1.21.11")
-        downloadPlugins {
-            modrinth("luckperms", "v5.5.17-bukkit")
-        }
+        minecraftVersion("1.21.10")
     }
 
     test {

@@ -228,28 +228,13 @@ public class Vault implements MaltsInventory {
         return trustedPlayers.contains(uuid) || uuid == this.key.owner();
     }
 
-
     /**
      * Adds a trusted player to this vault.
      * @param uuid the UUID of the player to trust
      * @return true if the player was added, false if the player was already trusted or the trust cap was reached
      */
-    public boolean addTrusted(@NotNull UUID uuid) {
-        MaltsPlayer maltsPlayer = DataSource.getInstance().cachedObject(this.key.owner(), MaltsPlayer.class);
-        Preconditions.checkNotNull(maltsPlayer, "MaltsPlayer should not be null for vault owner. (Did you forget to cache it?)");
-
-        return addTrusted(maltsPlayer, uuid);
-    }
-
-    /**
-     * Adds a trusted player to this vault.
-     * @param maltsPlayer the MaltsPlayer object of the vault owner
-     * @param uuid the UUID of the player to trust
-     * @return true if the player was added, false if the player was already trusted or the trust cap was reached
-     */
-    public boolean addTrusted(@NotNull MaltsPlayer maltsPlayer, @NotNull UUID uuid) {
-        if (trustedPlayers.contains(uuid)) return false;
-        int cap = maltsPlayer.getTrustCapacity();
+    public boolean addTrusted(UUID uuid) {
+        int cap = cfg.vaults().trustCap();
         VaultTrustPlayerEvent event = new VaultTrustPlayerEvent(this, EventAction.ADD, uuid, !Bukkit.isPrimaryThread());
         event.setCancelled(trustedPlayers.size() >= cap);
 

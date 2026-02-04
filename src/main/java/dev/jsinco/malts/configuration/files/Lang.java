@@ -124,7 +124,6 @@ public class Lang extends OkaeriFile {
             private String startImport;
             private String importComplete;
             private String failedImport;
-            private String confirmImport;
         }
         @Getter
         @Accessors(fluent = true)

@@ -88,6 +88,3 @@ permissions:
   malts.searchother:
     description: Allows a player to search other players' vaults.
     default: op
-  malts.override.trustcap:
-    description: Allows for changing the vault trust cap of a specific player beyond or below the configured limit.
-    default: op

@@ -84,7 +84,6 @@ command:
     startImport: 正在从 {importer} 导入保险箱数据...（可能得等上一会！）
     importComplete: 成功导入了 {amount} 个玩家的保险箱，另外有 {failedAmount} 个导入失败。
     failedImport: '导入失败：{uuid} -> {result}'
-    confirmImport: "Are you sure you want to import vaults from <yellow>{importer}</yellow>? This action is non-destructive but may not be easily un-done. Type <hover:show_text:'Click to run.'><click:suggest_command:'/malts import {importer} confirm'><aqua>/malts import {importer} confirm</aqua></click></hover> to confirm."
   vaultOther:
     noVaultFound: '{name} 没有名为 {id} 的保险箱。'
   reload:
