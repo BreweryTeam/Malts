@@ -12,7 +12,6 @@ import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.storage.DataSource;
-import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Text;
 import dev.jsinco.malts.utility.Util;
@@ -29,12 +28,10 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Represents a transient vault inventory in Malts.
@@ -126,9 +123,8 @@ public class Vault implements MaltsInventory {
      * @param player the player to open the vault for
      */
     public void open(Player player) {
-        Executors.runSync(() -> {
-            List<Player> viewers = this.getViewers();
-            boolean canOpen = this.canOpen(player, viewers);
+        this.getViewers().thenAccept(viewers -> {
+            boolean canOpen = this.canOpen(player, viewers); // TODO: Might have to be CompletableFuture if hasPermission cannot be invoked async
             VaultOpenEvent event = new VaultOpenEvent(this, player, viewers, !Bukkit.isPrimaryThread());
             event.setCancelled(!canOpen);
             Text.debug("Player " + player.getName() + " is attempting to open vault " + this.key.id() + ". Can open: " + canOpen);
@@ -138,8 +134,10 @@ public class Vault implements MaltsInventory {
                 return;
             }
 
-            player.openInventory(this.inventory);
 
+            Executors.runSync(player, () -> {
+                player.openInventory(this.inventory);
+            });
 
 
             if (viewers.isEmpty()) {
@@ -147,9 +145,11 @@ public class Vault implements MaltsInventory {
             }
 
             Player otherPlayer = viewers.getFirst();
-            if (otherPlayer.getOpenInventory().getTopInventory().getHolder(false) instanceof Vault otherVault) {
-                otherVault.update(otherPlayer); // Update this vault
-            }
+            Executors.runSync(otherPlayer, () -> {
+                if (otherPlayer.getOpenInventory().getTopInventory().getHolder(false) instanceof Vault otherVault) {
+                    otherVault.update(otherPlayer); // Update this vault
+                }
+            });
         });
     }
 
@@ -186,14 +186,28 @@ public class Vault implements MaltsInventory {
         return true;
     }
 
-    public List<Player> getViewers() {
+    public CompletableFuture<List<Player>> getViewers() {
         List<Player> viewers = new ArrayList<>();
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (this.equals(player.getOpenInventory().getTopInventory().getHolder(false))) {
-                viewers.add(player);
-            }
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            Executors.runSync(player, () -> {
+                try {
+                    if (this.equals(player.getOpenInventory().getTopInventory().getHolder(false))) {
+                        synchronized (viewers) {
+                            viewers.add(player);
+                        }
+                    }
+                } finally {
+                    future.complete(null);
+                }
+            });
+            futures.add(future);
         }
-        return viewers;
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> viewers);
     }
 
     /**
@@ -209,12 +223,14 @@ public class Vault implements MaltsInventory {
                 if (updater != null && player.getUniqueId() == updater.getUniqueId()) {
                     continue;
                 }
-                
-                Inventory inv = player.getOpenInventory().getTopInventory();
-                if (this.equals(inv.getHolder(false))) {
-                    inv.setContents(this.inventory.getContents());
-                    Text.debug("Updated inventory for player " + player.getName() + " with vault " + this.key.id());
-                }
+
+                Executors.sync(player, () -> {
+                    Inventory inv = player.getOpenInventory().getTopInventory();
+                    if (this.equals(inv.getHolder(false))) {
+                        inv.setContents(this.inventory.getContents());
+                        Text.debug("Updated inventory for player " + player.getName() + " with vault " + this.key.id());
+                    }
+                });
             }
         });
     }

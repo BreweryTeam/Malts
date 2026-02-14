@@ -147,7 +147,7 @@ public class VaultOtherGui extends MaltsGui implements PromisedInventory {
     public void openImpl(Player player) {
         promiseInventory().thenAccept(inventory -> {
             if (inventory != null) {
-                Executors.runSync(() -> player.openInventory(inventory));
+                Executors.runSync(player, () -> player.openInventory(inventory));
             }
         });
     }

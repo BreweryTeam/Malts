@@ -429,8 +429,9 @@ public abstract class DataSource {
         instance = config.driver().supply(config); // Set a new instance
         instance.setup().whenComplete((unused, throwable) -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                instance.cacheObject(instance.getMaltsPlayer(player.getUniqueId()));
-                instance.cacheObject(instance.getWarehouse(player.getUniqueId()));
+                UUID uuid = player.getUniqueId();
+                instance.cacheObject(instance.getMaltsPlayer(uuid));
+                instance.cacheObject(instance.getWarehouse(uuid));
             }
         }).exceptionally(ex -> {
             throw new IllegalStateException("An exception/error occurred while setting up the DataSource", ex);

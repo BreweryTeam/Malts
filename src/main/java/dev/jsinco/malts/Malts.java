@@ -66,7 +66,7 @@ public class Malts extends JavaPlugin {
 
         for (Player player : getServer().getOnlinePlayers()) {
             Inventory inv = player.getOpenInventory().getTopInventory();
-            if (inv != null && inv.getHolder(false) instanceof MaltsInventory) {
+            if (inv.getHolder(false) instanceof MaltsInventory) {
                 player.closeInventory();
             }
         }

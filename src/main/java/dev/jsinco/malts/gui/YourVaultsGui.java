@@ -152,7 +152,7 @@ public class YourVaultsGui extends MaltsGui implements PromisedInventory {
     @Override
     public void openImpl(Player player) {
         promiseInventory().thenAccept(inventory -> {
-            Executors.sync(() -> player.openInventory(inventory));
+            Executors.sync(player, () -> player.openInventory(inventory));
         });
     }
 

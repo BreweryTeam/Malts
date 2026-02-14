@@ -3,6 +3,7 @@ package dev.jsinco.malts.commands.subcommands;
 import com.google.common.base.Preconditions;
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
+import dev.jsinco.malts.enums.WarehouseMode;
 import dev.jsinco.malts.gui.WarehouseGui;
 import dev.jsinco.malts.obj.MaltsPlayer;
 import dev.jsinco.malts.obj.Warehouse;
@@ -26,13 +27,13 @@ public class WarehouseCommand implements SubCommand {
         Warehouse warehouse = dataSource.cachedObject(player.getUniqueId(), Warehouse.class);
         MaltsPlayer maltsPlayer = dataSource.cachedObject(player.getUniqueId(), MaltsPlayer.class);
 
+        Preconditions.checkNotNull(warehouse, "Warehouse cannot be null for command execution");
+        Preconditions.checkNotNull(maltsPlayer, "MaltsPlayer cannot be null for command execution");
 
         if (args.isEmpty()) {
             WarehouseGui warehouseGui = new WarehouseGui(warehouse, maltsPlayer);
             warehouseGui.open(player);
             return true;
-        } else if (args.size() < 3) {
-            return false;
         }
 
         ArgOption option = Util.getEnum(args.getFirst(), ArgOption.class);
@@ -41,19 +42,9 @@ public class WarehouseCommand implements SubCommand {
             return false;
         }
 
-        Material material = Util.getEnum(args.get(1), Material.class);
-        int amount = Util.getInteger(args.get(2), 0);
+        List<String> newArgs = args.subList(1, args.size());
 
-        if (material == null || !material.isItem()) {
-            lng.entry(l -> l.warehouse().blacklistedItem(), player, Couple.of("{material}", Util.formatEnumerator(args.get(1))));
-            return true;
-        } else if (amount <= 0) {
-            lng.entry(l -> l.warehouse().notEnoughMaterial(), player, Couple.of("{material}", Util.formatEnumerator(material)));
-            return true;
-        }
-
-        option.getExecutor().handle(plugin, player, maltsPlayer, warehouse, material, amount);
-        return true;
+        return option.handle(player, maltsPlayer, warehouse, newArgs);
     }
 
     @Override
@@ -63,17 +54,19 @@ public class WarehouseCommand implements SubCommand {
         Warehouse warehouse = dataSource.cachedObject(player.getUniqueId(), Warehouse.class);
         Preconditions.checkNotNull(warehouse, "Warehouse cannot be null for tab completion");
 
-        return switch (args.size()) {
-            case 1 -> Arrays.stream(ArgOption.values())
+        if (args.size() < 2) {
+            return Arrays.stream(ArgOption.values())
                     .map(Enum::toString)
                     .map(String::toLowerCase)
                     .toList();
-            case 2 -> warehouse.storedMaterials().stream()
-                    .map(it -> it.toString().toLowerCase())
-                    .toList();
-            case 3 -> Util.tryGetNextNumberArg(args.get(2));
-            default -> List.of();
-        };
+        }
+
+        ArgOption option = Util.getEnum(args.getFirst(), ArgOption.class);
+        if (option != null) {
+            List<String> newArgs = args.subList(1, args.size());
+            return option.tabeComplete(player, warehouse, newArgs);
+        }
+        return List.of();
     }
 
     @Override
@@ -92,33 +85,112 @@ public class WarehouseCommand implements SubCommand {
     }
 
 
+    @SuppressWarnings("Duplicates") // TODO: extract out common code
     @Getter
     enum ArgOption {
 
-        DEPOSIT((plugin, player, maltsPlayer, warehouse, material, amount) -> {
-            if (warehouse.hasCompartment(material)) {
-                warehouse.stockWithInventory(player, player.getInventory(), material, amount);
-            } else {
-                lng.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+
+        DEPOSIT {
+            @Override
+            public boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args) {
+                if (args.size() < 3) return false;
+                Material material = Util.getEnum(args.getFirst(), Material.class);
+                int amount = Util.getInteger(args.get(1), 0);
+
+                if (!evaluateMaterial(player, material, args.getFirst(), amount)) {
+                    return false;
+                }
+
+                if (warehouse.hasCompartment(material)) {
+                    warehouse.stockWithInventory(player, player.getInventory(), material, amount);
+                } else {
+                    lng.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+                }
+                return true;
             }
-        }),
-        WITHDRAW((plugin, player, maltsPlayer, warehouse, material, amount) -> {
-            if (warehouse.hasCompartment(material)) {
-                warehouse.destockToInventory(player, player.getInventory(), material, amount);
-            } else {
-                lng.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+
+            @Override
+            public List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args) {
+                return switch (args.size()) {
+                    case 1 -> warehouse.storedMaterials().stream()
+                            .map(it -> it.toString().toLowerCase())
+                            .toList();
+                    case 2 -> Util.tryGetNextNumberArg(args.get(1));
+                    default -> List.of();
+                };
             }
-        });
+        },
+        WITHDRAW {
+            @Override
+            public boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args) {
+                if (args.size() < 3) return false;
+                Material material = Util.getEnum(args.getFirst(), Material.class);
+                int amount = Util.getInteger(args.get(1), 0);
+
+                if (!evaluateMaterial(player, material, args.getFirst(), amount)) {
+                    return false;
+                }
+
+                if (warehouse.hasCompartment(material)) {
+                    warehouse.destockToInventory(player, player.getInventory(), material, amount);
+                } else {
+                    lng.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+                }
+                return true;
+            }
+
+            @Override
+            public List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args) {
+                return switch (args.size()) {
+                    case 1 -> warehouse.storedMaterials().stream()
+                            .map(it -> it.toString().toLowerCase())
+                            .toList();
+                    case 2 -> Util.tryGetNextNumberArg(args.get(1));
+                    default -> List.of();
+                };
+            }
+        },
+        MODE {
+            @Override
+            public boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args) {
+                WarehouseMode mode = Util.getEnum(args.getFirst(), WarehouseMode.class);
+                if (mode == null) {
+                    return false;
+                }
+
+                if (mode.canUseMode(player)) {
+                    lng.entry(l -> l.warehouse().changedMode(), player, Couple.of("{mode}", Util.formatEnumerator(mode)));
+                    maltsPlayer.setWarehouseMode(mode);
+                } else {
+                    // TODO: custom lang entry
+                    lng.entry(l -> l.command().base().noPermission(), player);
+                }
+                return true;
+            }
+
+            @Override
+            public List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args) {
+                return Arrays.stream(WarehouseMode.values())
+                        .filter(mode -> mode.canUseMode(player))
+                        .map(it -> it.toString().toLowerCase())
+                        .toList();
+            }
+        };
 
 
-        private final Handler executor;
+        public abstract boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args);
+        public abstract List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args);
 
-        ArgOption(Handler executor) {
-            this.executor = executor;
-        }
 
-        private interface Handler {
-            void handle(Malts plugin, Player sender, MaltsPlayer maltsPlayer, Warehouse warehouse, Material material, int amount);
+        private static boolean evaluateMaterial(Player player, Material material, String materialArg, int amount) {
+            if (material == null || !material.isItem()) {
+                lng.entry(l -> l.warehouse().blacklistedItem(), player, Couple.of("{material}", materialArg));
+                return false;
+            } else if (amount <= 0) {
+                lng.entry(l -> l.warehouse().notEnoughMaterial(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+                return false;
+            }
+            return true;
         }
     }
 }

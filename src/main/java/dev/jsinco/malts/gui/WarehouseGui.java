@@ -185,7 +185,7 @@ public class WarehouseGui extends MaltsGui {
                 ItemStack clickedItem = event.getCurrentItem();
                 Inventory inv = event.getInventory();
                 if (event.getClickedInventory() == inv && !ItemStacks.borderItem().isSimilar(clickedItem)) {
-                    Executors.delayedSync(1, () -> inv.setItem(cfg.warehouseGui().statusIcon().slot(), self.getItemStack()));
+                    Executors.delayedSync(event.getWhoClicked(), 1, () -> inv.setItem(cfg.warehouseGui().statusIcon().slot(), self.getItemStack()));
                 }
             })
             .build();

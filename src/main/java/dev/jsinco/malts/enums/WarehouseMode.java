@@ -55,7 +55,7 @@ public enum WarehouseMode {
         event.setCancelled(true);
         event.setFlyAtPlayer(true);
 
-        Executors.delayedSync(1, () -> {
+        Executors.delayedSync(physicalItem, 1, () -> {
             physicalItem.remove();
             if (remainder > 0) {
                 itemStack.setAmount(remainder);
@@ -140,7 +140,7 @@ public enum WarehouseMode {
             return;
         }
 
-        Executors.delayedSync(1, () -> {
+        Executors.delayedSync(player, 1, () -> {
             ItemStack itemInHand = player.getInventory().getItem(hand);
 
             ItemStack item = warehouse.destockItem(material, itemInHand.getMaxStackSize() - itemInHand.getAmount());
@@ -199,6 +199,16 @@ public enum WarehouseMode {
         Preconditions.checkNotNull(warehouse, "Warehouse is not cached.");
 
         ((Handler<T>) handler).handle(event, maltsPlayer, warehouse);
+    }
+
+    public boolean canUseMode(Player player) {
+        if (this == NONE) {
+            return true;
+        }
+
+        List<WarehouseMode> enabledModes = getEnabledModes();
+        String permission = this.getPermission();
+        return permission != null && player.hasPermission(permission) && enabledModes.contains(this);
     }
 
     @FunctionalInterface

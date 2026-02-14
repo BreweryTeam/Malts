@@ -3,8 +3,9 @@ package dev.jsinco.malts.utility;
 import dev.jsinco.malts.Malts;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.bukkit.scheduler.BukkitTask;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -16,42 +17,24 @@ import java.util.function.Consumer;
 
 public final class Executors {
 
-    private static final Malts instance = Malts.getInstance();
+    private static final Malts INSTANCE = Malts.getInstance();
+    public static final boolean IS_FOLIA = ClassUtil.classExists("io.papermc.paper.threadedregions.RegionizedServer");
+    private static final long MIN_DELAY = IS_FOLIA ? 1 : 0;
 
     public static ScheduledTask runRepeatingAsync(long delay, long period, TimeUnit timeUnit, Consumer<ScheduledTask> consumer) {
-        return Bukkit.getAsyncScheduler().runAtFixedRate(instance, consumer, delay, period, timeUnit);
+        return Bukkit.getAsyncScheduler().runAtFixedRate(INSTANCE, consumer, delay, period, timeUnit);
     }
 
     public static ScheduledTask runDelayedAsync(long delay, TimeUnit timeUnit, Consumer<ScheduledTask> consumer) {
-        return Bukkit.getAsyncScheduler().runDelayed(instance, consumer, delay, timeUnit);
+        return Bukkit.getAsyncScheduler().runDelayed(INSTANCE, consumer, delay, timeUnit);
     }
 
     public static ScheduledTask runRepeatingAsync(long period, TimeUnit timeUnit, Consumer<ScheduledTask> consumer) {
-        return Bukkit.getAsyncScheduler().runAtFixedRate(instance, consumer, 0, period, timeUnit);
+        return Bukkit.getAsyncScheduler().runAtFixedRate(INSTANCE, consumer, 0, period, timeUnit);
     }
 
     public static ScheduledTask runAsync(Consumer<ScheduledTask> consumer) {
-        return Bukkit.getAsyncScheduler().runNow(instance, consumer);
-    }
-
-    // TODO: Better logging
-    public static BukkitTask runAsync(Runnable runnable) {
-        return Bukkit.getScheduler().runTaskAsynchronously(instance, () -> {
-            try {
-                runnable.run();
-            } catch (Throwable t) {
-                t.printStackTrace();
-            }
-        });
-    }
-
-    @Nullable
-    public static BukkitTask runAsyncWithSQLException(ExceptionUtil.ThrowingSQLException runnable) {
-        if (Malts.isShutdown()) {
-            runSync(() -> ExceptionUtil.runWithSQLExceptionHandling(runnable));
-            return null;
-        }
-        return runAsync(() -> ExceptionUtil.runWithSQLExceptionHandling(runnable));
+        return Bukkit.getAsyncScheduler().runNow(INSTANCE, consumer);
     }
 
 
@@ -83,26 +66,50 @@ public final class Executors {
 
     // Synchronous
 
-    public static BukkitTask delayedSync(long delay, Runnable runnable) {
-        return Bukkit.getScheduler().runTaskLater(instance, runnable, delay);
+    public static ScheduledTask delayedSync(Location location, long delay, Runnable runnable) {
+        return Bukkit.getRegionScheduler().runDelayed(INSTANCE, location, t -> runnable.run(), Math.min(delay, MIN_DELAY));
+    }
+    public static ScheduledTask delayedSync(Entity entity, long delay, Runnable runnable) {
+        return entity.getScheduler().runDelayed(INSTANCE, t -> runnable.run(), null, Math.min(delay, MIN_DELAY));
     }
 
-    // TODO: Better logging
-    public static BukkitTask sync(Runnable runnable) {
-        return Bukkit.getScheduler().runTask(instance, () -> {
+    public static ScheduledTask delayedSync(long delay, Runnable runnable) {
+        return Bukkit.getGlobalRegionScheduler().runDelayed(INSTANCE, (t) -> runnable.run(), Math.min(delay, MIN_DELAY));
+    }
+
+    public static ScheduledTask sync(Location location, Runnable runnable) {
+        return Bukkit.getRegionScheduler().run(INSTANCE, location, (task) -> {
             try {
                 runnable.run();
             } catch (Throwable t) {
-                t.printStackTrace();
+                Text.error("An error occurred while running a synchronous task for location " + location, t);
             }
         });
     }
 
-    public static void runSync(Runnable runnable) {
-        if (Bukkit.isPrimaryThread()) {
+    public static ScheduledTask sync(Entity entity, Runnable runnable) {
+        return entity.getScheduler().run(INSTANCE, (task) -> {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                Text.error("An error occurred while running a synchronous task for entity " + entity.getUniqueId(), t);
+            }
+        }, null);
+    }
+
+    public static void runSync(Location location, Runnable runnable) {
+        if (Bukkit.isOwnedByCurrentRegion(location)) {
             runnable.run();
         } else {
-            sync(runnable);
+            sync(location, runnable);
+        }
+    }
+
+    public static void runSync(Entity entity, Runnable runnable) {
+        if (Bukkit.isOwnedByCurrentRegion(entity)) {
+            runnable.run();
+        } else {
+            sync(entity, runnable);
         }
     }
 
