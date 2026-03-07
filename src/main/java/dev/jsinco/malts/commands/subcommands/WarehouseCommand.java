@@ -64,7 +64,7 @@ public class WarehouseCommand implements SubCommand {
         ArgOption option = Util.getEnum(args.getFirst(), ArgOption.class);
         if (option != null) {
             List<String> newArgs = args.subList(1, args.size());
-            return option.tabeComplete(player, warehouse, newArgs);
+            return option.tabComplete(player, warehouse, newArgs);
         }
         return List.of();
     }
@@ -93,7 +93,7 @@ public class WarehouseCommand implements SubCommand {
         DEPOSIT {
             @Override
             public boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args) {
-                if (args.size() < 3) return false;
+                if (args.size() < 2) return false;
                 Material material = Util.getEnum(args.getFirst(), Material.class);
                 int amount = Util.getInteger(args.get(1), 0);
 
@@ -110,7 +110,7 @@ public class WarehouseCommand implements SubCommand {
             }
 
             @Override
-            public List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args) {
+            public List<String> tabComplete(Player player, Warehouse warehouse, List<String> args) {
                 return switch (args.size()) {
                     case 1 -> warehouse.storedMaterials().stream()
                             .map(it -> it.toString().toLowerCase())
@@ -123,7 +123,7 @@ public class WarehouseCommand implements SubCommand {
         WITHDRAW {
             @Override
             public boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args) {
-                if (args.size() < 3) return false;
+                if (args.size() < 2) return false;
                 Material material = Util.getEnum(args.getFirst(), Material.class);
                 int amount = Util.getInteger(args.get(1), 0);
 
@@ -140,7 +140,7 @@ public class WarehouseCommand implements SubCommand {
             }
 
             @Override
-            public List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args) {
+            public List<String> tabComplete(Player player, Warehouse warehouse, List<String> args) {
                 return switch (args.size()) {
                     case 1 -> warehouse.storedMaterials().stream()
                             .map(it -> it.toString().toLowerCase())
@@ -169,7 +169,7 @@ public class WarehouseCommand implements SubCommand {
             }
 
             @Override
-            public List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args) {
+            public List<String> tabComplete(Player player, Warehouse warehouse, List<String> args) {
                 return Arrays.stream(WarehouseMode.values())
                         .filter(mode -> mode.canUseMode(player))
                         .map(it -> it.toString().toLowerCase())
@@ -179,7 +179,7 @@ public class WarehouseCommand implements SubCommand {
 
 
         public abstract boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args);
-        public abstract List<String> tabeComplete(Player player, Warehouse warehouse, List<String> args);
+        public abstract List<String> tabComplete(Player player, Warehouse warehouse, List<String> args);
 
 
         private static boolean evaluateMaterial(Player player, Material material, String materialArg, int amount) {
