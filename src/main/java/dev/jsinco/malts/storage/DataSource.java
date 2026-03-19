@@ -131,7 +131,14 @@ public abstract class DataSource {
 
 
     public DataSource(Config.Storage config) {
-        this.hikari = new HikariDataSource(this.hikariConfig(config));
+        HikariConfig hikariConfig = hikariConfig(config);
+
+        hikariConfig.setMaxLifetime(1800000); // 30 min
+        hikariConfig.setIdleTimeout(600000); // 10 min
+        hikariConfig.setMinimumIdle(1);
+        hikariConfig.setKeepaliveTime(300000); // 5 min
+        hikariConfig.setConnectionTestQuery("SELECT 1");
+        this.hikari = new HikariDataSource(hikariConfig);
     }
 
     public Connection connection() throws SQLException {
