@@ -2,11 +2,11 @@ package dev.jsinco.malts.storage.sources;
 
 import com.zaxxer.hikari.HikariConfig;
 import dev.jsinco.malts.configuration.files.Config;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.SnapshotVault;
-import dev.jsinco.malts.obj.Stock;
-import dev.jsinco.malts.obj.Vault;
-import dev.jsinco.malts.obj.Warehouse;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.SnapshotVault;
+import dev.jsinco.malts.model.Stock;
+import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Text;
@@ -26,16 +26,16 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @SuppressWarnings("DuplicatedCode") // TODO: Extract out common code
-public class MySQLDataSource extends DataSource {
+public class MariaDBDataSource extends DataSource {
 
-    public MySQLDataSource(Config.Storage config) {
+    public MariaDBDataSource(Config.Storage config) {
         super(config);
     }
 
     @Override
     public HikariConfig hikariConfig(Config.Storage config) {
         HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setPoolName("MaltsMySQL");
+        hikariConfig.setPoolName("MaltsMariaDB");
         hikariConfig.setDriverClassName("com.mysql.cj.jdbc.Driver");
         hikariConfig.setJdbcUrl("jdbc:mysql://" + config.host() + ":" + config.port() + "/" + config.database() + config.jdbcFlags());
         hikariConfig.setUsername(config.username());

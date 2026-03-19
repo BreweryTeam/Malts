@@ -1,9 +1,7 @@
 package dev.jsinco.malts.api.events;
 
 import dev.jsinco.malts.importers.Importer;
-import org.bukkit.Bukkit;
 import org.bukkit.event.Cancellable;
-import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

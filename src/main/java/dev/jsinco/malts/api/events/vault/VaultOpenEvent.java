@@ -1,13 +1,12 @@
 package dev.jsinco.malts.api.events.vault;
 
 import dev.jsinco.malts.api.events.interfaces.VaultEvent;
-import dev.jsinco.malts.obj.Vault;
+import dev.jsinco.malts.model.Vault;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * Called when a player attempts to open a vault.

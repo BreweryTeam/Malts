@@ -31,7 +31,7 @@ public abstract class SubCommandWrapper implements TabExecutor {
             return true;
         }
 
-        boolean result = subCommand.execute(Malts.getInstance(), sender, label, List.of(args));
+        boolean result = subCommand.execute(sender, label, List.of(args));
         if (!result) {
             lang.entry(l -> l.command().base().invalidUsage(), sender);
         }
@@ -43,7 +43,7 @@ public abstract class SubCommandWrapper implements TabExecutor {
         if (subCommand.permission() != null && !sender.hasPermission(subCommand.permission())) {
             return null;
         }
-        return subCommand.tabComplete(Malts.getInstance(), sender, label, List.of(args));
+        return subCommand.tabComplete(sender, label, List.of(args));
     }
 
     public String name() {

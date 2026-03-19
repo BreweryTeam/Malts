@@ -26,6 +26,7 @@ vaults:
   nameChanged: Vault name changed to <aqua><b>{vaultName}</b></aqua>.
   noAccess: You do not have access to this vault.
   alreadyOpen: This vault is currently open by another player.
+  databaseBusy: This vault is locked because it's currently being saved. Please try again in a moment.
   trustListMaxed: You have reached the maximum amount of players you can trust. ({trustedListSize})
   playerNeverOnServer: '{name} has never joined this server.'
   playerTrusted: '{name} has been added to your trust list.'

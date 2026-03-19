@@ -1,4 +1,4 @@
-package dev.jsinco.malts.obj;
+package dev.jsinco.malts.model;
 
 import com.google.common.collect.ImmutableList;
 import dev.jsinco.malts.configuration.ConfigManager;
@@ -14,22 +14,21 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-import static dev.jsinco.malts.obj.Vault.BYPASS_OPEN_VAULT_PERM;
-import static dev.jsinco.malts.obj.Vault.LIST_UUID_TYPE_TOKEN;
+import static dev.jsinco.malts.model.Vault.BYPASS_OPEN_VAULT_PERM;
+import static dev.jsinco.malts.model.Vault.LIST_UUID_TYPE_TOKEN;
 
 /**
  * A snapshot of a vault's data, used for displaying in GUIs without loading the full vault.
  */
 public class SnapshotVault extends AbstractGuiItem {
 
-    private static final GuiConfig cfg = ConfigManager.get(GuiConfig.class);
+    private static final GuiConfig GUI_CONFIG = ConfigManager.get(GuiConfig.class);
 
     @Getter
     private final VaultKey key;
@@ -88,9 +87,9 @@ public class SnapshotVault extends AbstractGuiItem {
                         Couple.of("{vaultName}", customName),
                         Couple.of("{id}", this.key.id())
                 )
-                .displayName(cfg.yourVaultsGui().vaultItem().name())
+                .displayName(GUI_CONFIG.yourVaultsGui().vaultItem().name())
                 .material(icon)
-                .lore(cfg.yourVaultsGui().vaultItem().lore())
+                .lore(GUI_CONFIG.yourVaultsGui().vaultItem().lore())
                 .build();
     }
 

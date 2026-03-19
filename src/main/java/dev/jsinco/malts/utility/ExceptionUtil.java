@@ -1,6 +1,7 @@
 package dev.jsinco.malts.utility;
 
 import java.sql.SQLException;
+import java.util.function.Consumer;
 
 public final class ExceptionUtil {
 
@@ -34,6 +35,14 @@ public final class ExceptionUtil {
         } catch (Throwable t) {
             t.printStackTrace();
             throw new RuntimeException("An unexpected error occurred", t);
+        }
+    }
+
+    public static void unsafe(Runnable runnable) {
+        try {
+            runnable.run();
+        } catch (Throwable t) {
+            Text.error("An unexpected error occurred: " + t.getMessage(), t);
         }
     }
 }

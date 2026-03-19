@@ -26,6 +26,7 @@ vaults:
   nameChanged: 保险箱名称已改为<aqua><b>{vaultName}</b></aqua>.
   noAccess: 你不能打开这个保险箱。
   alreadyOpen: 这个保险箱当前被其他玩家占用。
+  databaseBusy: This vault is locked because it's currently being saved. Please try again in a moment.
   trustListMaxed: 你不能再信任更多玩家了。（{trustedListSize}）
   playerNeverOnServer: '{name} 从未加入过服务器。'
   playerTrusted: '{name} 已添加至你的信任列表。'

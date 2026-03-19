@@ -1,7 +1,7 @@
 package dev.jsinco.malts.api.events;
 
 import dev.jsinco.malts.api.events.interfaces.EventAction;
-import dev.jsinco.malts.obj.CachedObject;
+import dev.jsinco.malts.model.CachedObject;
 import dev.jsinco.malts.storage.DataSource;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;

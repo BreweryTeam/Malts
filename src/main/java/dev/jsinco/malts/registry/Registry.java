@@ -29,6 +29,10 @@ import dev.jsinco.malts.integration.IntegrationCrafter;
 import dev.jsinco.malts.integration.external.PlayerPointsIntegration;
 import dev.jsinco.malts.integration.external.VaultIntegration;
 import dev.jsinco.malts.integration.compiled.BStatsIntegration;
+import dev.jsinco.malts.integration.external.papi.MaxVaultsPlaceholder;
+import dev.jsinco.malts.integration.external.papi.Placeholder;
+import dev.jsinco.malts.integration.external.papi.PlaceholderAPIIntegration;
+import dev.jsinco.malts.integration.external.papi.VaultsPlaceholder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,7 +51,8 @@ public class Registry<T extends RegistryItem> implements Iterable<Map.Entry<Stri
     public static final Registry<SubCommand> SUB_COMMANDS = fromClasses(VaultsCommand.class, WarehouseCommand.class, ImportCommand.class, VaultOtherCommand.class, WarehouseAdminCommand.class, MaxCommand.class, VaultAdminCommand.class, ReloadCommand.class, HelpCommand.class, QuickReturnCommand.class, VaultNameCommand.class, SearchCommand.class, EditVaultCommand.class);
     public static final Registry<Importer> IMPORTERS = fromClasses(PlayerVaultsImporter.class, AxVaultsImporter.class);
     public static final Registry<OkaeriFile> CONFIGS = fromClassesWithCrafter(new ConfigManager(), Config.class, GuiConfig.class, Lang.class);
-    public static final Registry<Integration> INTEGRATIONS = fromClassesWithCrafter(new IntegrationCrafter(), BStatsIntegration.class, CoreProtectIntegration.class, VaultIntegration.class, PlayerPointsIntegration.class, UpdateCheckIntegration.class);
+    public static final Registry<Integration> INTEGRATIONS = fromClassesWithCrafter(new IntegrationCrafter(), BStatsIntegration.class, CoreProtectIntegration.class, VaultIntegration.class, PlayerPointsIntegration.class, UpdateCheckIntegration.class, PlaceholderAPIIntegration.class);
+    public static final Registry<Placeholder> PAPI_PLACEHOLDERS = fromClasses(MaxVaultsPlaceholder.class, VaultsPlaceholder.class);
 
     private final Map<String, T> map;
 

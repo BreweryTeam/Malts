@@ -2,8 +2,8 @@ package dev.jsinco.malts.commands.subcommands;
 
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.Vault;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
@@ -13,7 +13,6 @@ import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -23,7 +22,7 @@ import java.util.stream.Stream;
 
 public class VaultAdminCommand implements SubCommand {
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.size() < 2) {
             return false;
         }
@@ -36,11 +35,11 @@ public class VaultAdminCommand implements SubCommand {
         }
 
         List<String> newArgs = args.subList(2, args.size());
-        return option.getExecutor().handle(plugin, sender, label, newArgs, offlinePlayer);
+        return option.getExecutor().handle(sender, label, newArgs, offlinePlayer);
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         return switch (args.size()) {
             case 1 -> Stream.of(ArgOption.values()).map(it -> it.toString().toLowerCase()).toList();
             case 3 -> {
@@ -50,7 +49,7 @@ public class VaultAdminCommand implements SubCommand {
                 }
                 OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(args.get(1));
                 List<String> newArgs = args.subList(2, args.size());
-                yield option.getTabCompleter().handle(plugin, sender, label, newArgs, offlinePlayer);
+                yield option.getTabCompleter().handle(sender, label, newArgs, offlinePlayer);
             }
             default -> null;
         };
@@ -73,18 +72,18 @@ public class VaultAdminCommand implements SubCommand {
 
     @Getter
     enum ArgOption {
-        DELETE((plugin, sender, label, args, offlinePlayer) -> {
+        DELETE((sender, label, args, offlinePlayer) -> {
             DataSource dataSource = DataSource.getInstance();
             int vaultId = Util.getInteger(args.getFirst(), -1);
             if (vaultId < 0) return false;
             dataSource.deleteVault(offlinePlayer.getUniqueId(), vaultId).thenAccept(deleted -> {
-                lng.entry(l -> {
+                LANG.entry(l -> {
                     if (deleted) return l.vaults().vaultDeleted();
                     else return l.vaults().noVaultFound();
                 }, sender, Couple.of("{id}", vaultId));
             });
             return true;
-        }, (plugin, sender, label, args, offlinePlayer) -> {
+        }, (sender, label, args, offlinePlayer) -> {
             DataSource dataSource = DataSource.getInstance();
             MaltsPlayer maltsPlayer = dataSource.cachedObject(offlinePlayer.getUniqueId(), MaltsPlayer.class);
             if (maltsPlayer == null ) {
@@ -95,19 +94,19 @@ public class VaultAdminCommand implements SubCommand {
                     .mapToObj(String::valueOf)
                     .collect(Collectors.toList());
         }),
-        OPEN((plugin, sender, label, args, offlinePlayer) -> {
+        OPEN((sender, label, args, offlinePlayer) -> {
             VaultOtherCommand vaultOtherCommand = Registry.SUB_COMMANDS.get(VaultOtherCommand.class);
             if (vaultOtherCommand.playerOnly() && !(sender instanceof Player)) return false;
-            return vaultOtherCommand.execute(plugin, sender, label, Util.plusFirstIndex(args, offlinePlayer.getName()));
-        }, (plugin, sender, label, args, offlinePlayer) -> {
+            return vaultOtherCommand.execute(sender, label, Util.plusFirstIndex(args, offlinePlayer.getName()));
+        }, (sender, label, args, offlinePlayer) -> {
             VaultOtherCommand vaultOtherCommand = Registry.SUB_COMMANDS.get(VaultOtherCommand.class);
-            return vaultOtherCommand.tabComplete(plugin, sender, label, Util.plusFirstIndex(args, offlinePlayer.getName()));
+            return vaultOtherCommand.tabComplete(sender, label, Util.plusFirstIndex(args, offlinePlayer.getName()));
         }),
-        TRANSFER((plugin, sender, label, args, offlinePlayer) -> {
+        TRANSFER((sender, label, args, offlinePlayer) -> {
             DataSource dataSource = DataSource.getInstance();
             OfflinePlayer otherPlayer = Bukkit.getOfflinePlayer(args.getFirst());
             if (offlinePlayer.getUniqueId().equals(otherPlayer.getUniqueId())) {
-                lng.entry(l -> lng.vaults().cannotTransfer(), sender);
+                LANG.entry(l -> LANG.vaults().cannotTransfer(), sender);
                 return true;
             }
 
@@ -123,7 +122,7 @@ public class VaultAdminCommand implements SubCommand {
                 for (Vault vault : player2Vaults) {
                     dataSource.saveVault(vault.copy(offlinePlayer.getUniqueId())).join();
                 }
-                lng.entry(
+                LANG.entry(
                         l -> l.vaults().transferred(),
                         sender,
                         Couple.of("{amount}", player1Vaults.size()),
@@ -133,22 +132,22 @@ public class VaultAdminCommand implements SubCommand {
                 );
             });
             return true;
-        }, (plugin, sender, label, args, offlinePlayer) -> {
+        }, (sender, label, args, offlinePlayer) -> {
             if (args.size() == 1) {
                 return null;
             }
             return List.of();
         }),
-        SEARCH((plugin, sender, label, args, offlinePlayer) -> {
+        SEARCH((sender, label, args, offlinePlayer) -> {
             SearchCommand searchCommand = Registry.SUB_COMMANDS.get(SearchCommand.class);
             if (searchCommand.playerOnly() && !(sender instanceof Player)) return false;
 
             List<String>  newArgs = Util.plusFirstIndex(args, "-player", offlinePlayer.getName());
-            return searchCommand.execute(plugin, sender, label, newArgs);
-        }, (plugin, sender, label, args, offlinePlayer) -> {
+            return searchCommand.execute(sender, label, newArgs);
+        }, (sender, label, args, offlinePlayer) -> {
             SearchCommand searchCommand = Registry.SUB_COMMANDS.get(SearchCommand.class);
 
-            return searchCommand.tabComplete(plugin, sender, label, Util.plusFirstIndex(args, "-player", offlinePlayer.getName()));
+            return searchCommand.tabComplete(sender, label, Util.plusFirstIndex(args, "-player", offlinePlayer.getName()));
         })
         ;
 
@@ -161,11 +160,11 @@ public class VaultAdminCommand implements SubCommand {
         }
 
         private interface Handler {
-            boolean handle(Malts plugin, CommandSender sender, String label, List<String> args, OfflinePlayer offlinePlayer);
+            boolean handle(CommandSender sender, String label, List<String> args, OfflinePlayer offlinePlayer);
         }
 
         private interface TabCompleter {
-            List<String> handle(Malts plugin, CommandSender sender, String label, List<String> args, OfflinePlayer offlinePlayer);
+            List<String> handle(CommandSender sender, String label, List<String> args, OfflinePlayer offlinePlayer);
         }
     }
 }

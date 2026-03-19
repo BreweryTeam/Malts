@@ -5,7 +5,6 @@ import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.OkaeriFile;
 import dev.jsinco.malts.configuration.files.Config;
-import dev.jsinco.malts.enums.Driver;
 import dev.jsinco.malts.integration.compiled.UpdateCheckIntegration;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
@@ -18,22 +17,28 @@ import java.util.List;
 
 public class ReloadCommand implements SubCommand {
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         boolean success = true;
         try {
+            Config.Storage oldStorage = ConfigManager.get(Config.class).storage();
+
             ConfigManager.createTranslationConfigs();
             Registry.CONFIGS.values()
                     .stream()
                     .sorted(Comparator.comparing(OkaeriFile::isDynamicFileName))
                     .forEach(OkaeriFile::reload);
 
-            Config.Storage storage = ConfigManager.get(Config.class).storage();
-            Driver setDriver = storage.driver();
-            DataSource dataSource = DataSource.getInstance();
-            if (setDriver.getIdentifyingClass() != dataSource.getClass()) {
+            Config.Storage newStorage = ConfigManager.get(Config.class).storage();
+
+            if (!oldStorage.equals(newStorage)) {
+                Text.log("Storage configuration has changed, re-initializing data source...");
+                DataSource dataSource = DataSource.getInstance();
                 dataSource.close().whenComplete((unused, throwable) -> {
-                    DataSource.createInstance(storage);
-                    lng.entry(l -> l.command().reload().newDatabaseDriverSet(), sender, Couple.of("{driver}", setDriver.toString()));
+                    DataSource.createInstance(newStorage);
+                    LANG.entry(l -> l.command().reload().newDatabaseDriverSet(), sender, Couple.of("{driver}", newStorage.driver().toString()));
+                }).exceptionally(throwable -> {
+                    throwable.printStackTrace();
+                    return null;
                 });
             }
 
@@ -44,7 +49,7 @@ public class ReloadCommand implements SubCommand {
         }
 
         final boolean finalSuccess = success;
-        lng.entry(l -> finalSuccess ? l.command().reload().success() : l.command().reload().failed(), sender);
+        LANG.entry(l -> finalSuccess ? l.command().reload().success() : l.command().reload().failed(), sender);
         if (finalSuccess) {
             UpdateCheckIntegration updateCheck = Registry.INTEGRATIONS.get(UpdateCheckIntegration.class);
             if (updateCheck != null && updateCheck.isUpdateAvailable()) {
@@ -55,7 +60,7 @@ public class ReloadCommand implements SubCommand {
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         return List.of();
     }
 

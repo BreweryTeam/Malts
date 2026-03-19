@@ -8,8 +8,8 @@ import dev.jsinco.malts.events.ChatPromptInputListener.ChatInputCallback;
 import dev.jsinco.malts.gui.item.GuiItem;
 import dev.jsinco.malts.gui.item.ItemConfirmation;
 import dev.jsinco.malts.gui.item.UncontainedGuiItem;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.Vault;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.ItemStacks;
@@ -32,19 +32,19 @@ import java.util.UUID;
 
 public class EditVaultGui extends MaltsGui {
 
-    private static final GuiConfig cfg = ConfigManager.get(GuiConfig.class);
-    private static final Lang lng = ConfigManager.get(Lang.class);
+    private static final GuiConfig CONFIG = ConfigManager.get(GuiConfig.class);
+    private static final Lang LANG = ConfigManager.get(Lang.class);
 
     private Vault vault;
     private MaltsPlayer maltsPlayer;
-    private Player p;
+    private Player player;
 
     private final GuiItem backButton = GuiItem.builder()
-            .index(() -> cfg.editVaultGui().backButton().slot())
+            .index(() -> CONFIG.editVaultGui().backButton().slot())
             .itemStack(b -> b
-                    .displayName(cfg.editVaultGui().backButton().name())
-                    .material(cfg.editVaultGui().backButton().material())
-                    .lore(cfg.editVaultGui().backButton().lore())
+                    .displayName(CONFIG.editVaultGui().backButton().name())
+                    .material(CONFIG.editVaultGui().backButton().material())
+                    .lore(CONFIG.editVaultGui().backButton().lore())
             )
             .action(e -> {
                 Player player = (Player) e.getWhoClicked();
@@ -54,15 +54,15 @@ public class EditVaultGui extends MaltsGui {
             .build();
     @SuppressWarnings("unchecked")
     private final GuiItem editNameButton = GuiItem.builder()
-            .index(() -> cfg.editVaultGui().editNameButton().slot())
+            .index(() -> CONFIG.editVaultGui().editNameButton().slot())
             .itemStack(b -> b
                     .stringReplacements(
                             Couple.of("{vaultName}", vault.getCustomName()),
                             Couple.of("{id}", String.valueOf(vault.getId()))
                     )
-                    .displayName(cfg.editVaultGui().editNameButton().name())
-                    .material(cfg.editVaultGui().editNameButton().material())
-                    .lore(cfg.editVaultGui().editNameButton().lore())
+                    .displayName(CONFIG.editVaultGui().editNameButton().name())
+                    .material(CONFIG.editVaultGui().editNameButton().material())
+                    .lore(CONFIG.editVaultGui().editNameButton().lore())
             )
             .action(event -> {
                 ItemStack clickedItem = event.getCurrentItem();
@@ -77,9 +77,9 @@ public class EditVaultGui extends MaltsGui {
                             if (!vault.setCustomName(input)) return;
                             DataSource.getInstance().saveVault(vault);
 
-                            lng.entry(l -> l.vaults().nameChanged(), player, Couple.of("{vaultName}", vault.getCustomName()));
+                            LANG.entry(l -> l.vaults().nameChanged(), player, Couple.of("{vaultName}", vault.getCustomName()));
                             Util.editMeta(clickedItem, meta -> {
-                                meta.lore(Text.mmlNoItalic(Util.replaceAll(cfg.editVaultGui().editNameButton().lore(), "{vaultName}", vault.getCustomName()), NamedTextColor.WHITE));
+                                meta.lore(Text.mmlNoItalic(Util.replaceAll(CONFIG.editVaultGui().editNameButton().lore(), "{vaultName}", vault.getCustomName()), NamedTextColor.WHITE));
                             });
                             open(player);
                         },
@@ -89,11 +89,11 @@ public class EditVaultGui extends MaltsGui {
             .build();
 
     private final UncontainedGuiItem editIconButton = UncontainedGuiItem.builder()
-            .index(() -> cfg.editVaultGui().editIconButton().slot())
+            .index(() -> CONFIG.editVaultGui().editIconButton().slot())
             .itemStack(b -> b
-                    .displayName(cfg.editVaultGui().editIconButton().name())
-                    .material(cfg.editVaultGui().editIconButton().material())
-                    .lore(cfg.editVaultGui().editIconButton().lore())
+                    .displayName(CONFIG.editVaultGui().editIconButton().name())
+                    .material(CONFIG.editVaultGui().editIconButton().material())
+                    .lore(CONFIG.editVaultGui().editIconButton().lore())
             )
             .action((event, self, isClicked) -> {
                 ItemStack clickedItem = event.getCurrentItem();
@@ -118,26 +118,28 @@ public class EditVaultGui extends MaltsGui {
 
                     iconItem.setType(newType); // TODO: deprecated method
                     itemConfirmation.setConfirmation(false);
-                    lng.entry(l -> l.vaults().iconChanged(), event.getWhoClicked(), Couple.of("{material}", Util.formatEnumerator(newType)));
+                    LANG.entry(l -> l.vaults().iconChanged(), event.getWhoClicked(), Couple.of("{material}", Util.formatEnumerator(newType)));
                 }
             })
             .build();
 
     @SuppressWarnings("unchecked")
     private final GuiItem editTrustedListButton = GuiItem.builder()
-            .index(() -> cfg.editVaultGui().editTrustListButton().slot())
+            .index(() -> CONFIG.editVaultGui().editTrustListButton().slot())
             .itemStack(b -> b
                     .stringReplacements(
                             Couple.of("{vaultName}", vault.getCustomName()),
                             Couple.of("{id}", String.valueOf(vault.getId())),
-                            Couple.of("{name}", p.getName()),
+                            Couple.of("{name}", player.getName()),
+                            Couple.of("{trustedListSize}", trustListCap(vault.getOwner())),
+                            Couple.of("{name}", player.getName()),
                             Couple.of("{trustedListSize}", trustListCap(vault.getOwner()))
                             //Couple.of("{trustedList}", trustedListString()),
                     )
-                    .displayName(cfg.editVaultGui().editTrustListButton().name())
-                    .material(cfg.editVaultGui().editTrustListButton().material())
-                    .headOwner(cfg.editVaultGui().editTrustListButton().headOwner())
-                    .lore(Util.replaceStringWithList(cfg.editVaultGui().editTrustListButton().lore(), "{trustedList}", trustedListString()))
+                    .displayName(CONFIG.editVaultGui().editTrustListButton().name())
+                    .material(CONFIG.editVaultGui().editTrustListButton().material())
+                    .headOwner(CONFIG.editVaultGui().editTrustListButton().headOwner())
+                    .lore(Util.replaceStringWithList(CONFIG.editVaultGui().editTrustListButton().lore(), "{trustedList}", trustedListString()))
             )
             .action(event -> {
                 ItemStack clickedItem = event.getCurrentItem();
@@ -152,30 +154,30 @@ public class EditVaultGui extends MaltsGui {
                             OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayerIfCached(input);
 
                             if (offlinePlayer == null) {
-                                lng.entry(l -> l.vaults().playerNeverOnServer(), player, Couple.of("{name}", input));
+                                LANG.entry(l -> l.vaults().playerNeverOnServer(), player, Couple.of("{name}", input));
                                 open(player);
                                 return;
                             }
 
                             if (vault.isTrusted(offlinePlayer.getUniqueId())) {
                                 if (vault.removeTrusted(offlinePlayer.getUniqueId())) {
-                                    lng.entry(l -> l.vaults().playerUntrusted(), player, Couple.of("{name}", input));
+                                    LANG.entry(l -> l.vaults().playerUntrusted(), player, Couple.of("{name}", input));
                                 } else {
-                                    lng.entry(l -> l.vaults().playerNotTrusted(), player, Couple.of("{name}", input));
+                                    LANG.entry(l -> l.vaults().playerNotTrusted(), player, Couple.of("{name}", input));
                                 }
                             } else if (vault.addTrusted(offlinePlayer.getUniqueId())){
-                                lng.entry(l -> l.vaults().playerTrusted(), player, Couple.of("{name}", input));
+                                LANG.entry(l -> l.vaults().playerTrusted(), player, Couple.of("{name}", input));
                             } else {
-                                lng.entry(l -> l.vaults().trustListMaxed(), player, Couple.of("{trustedListSize}", trustListCap(vault.getOwner())));
+                                LANG.entry(l -> l.vaults().trustListMaxed(), player, Couple.of("{trustedListSize}", trustListCap(vault.getOwner())));
                             }
 
                             DataSource.getInstance().saveVault(vault);
 
                             Util.editMeta(clickedItem, meta -> {
-                                meta.displayName(Text.mmNoItalic(cfg.editVaultGui().editTrustListButton().name().replace("{trustedListSize}", trustListCap(vault.getOwner())), NamedTextColor.AQUA));
+                                meta.displayName(Text.mmNoItalic(CONFIG.editVaultGui().editTrustListButton().name().replace("{trustedListSize}", trustListCap(vault.getOwner())), NamedTextColor.AQUA));
                                 meta.lore(Text.mmlNoItalic(
                                         Util.replaceAll(
-                                                Util.replaceStringWithList(cfg.editVaultGui().editTrustListButton().lore(), "{trustedList}", trustedListString()),
+                                                Util.replaceStringWithList(CONFIG.editVaultGui().editTrustListButton().lore(), "{trustedList}", trustedListString()),
                                                 "{trustedListSize}", trustListCap(vault.getOwner())
                                         ),
                                         NamedTextColor.WHITE
@@ -191,14 +193,14 @@ public class EditVaultGui extends MaltsGui {
 
 
     public EditVaultGui(Vault vault, MaltsPlayer maltsPlayer, Player player) {
-        super(cfg.editVaultGui().title().replace("{vaultName}", vault.getCustomName()).replace("{id}", String.valueOf(vault.getId())), cfg.editVaultGui().size());
+        super(CONFIG.editVaultGui().title().replace("{vaultName}", vault.getCustomName()).replace("{id}", String.valueOf(vault.getId())), CONFIG.editVaultGui().size());
         this.vault = vault;
         this.maltsPlayer = maltsPlayer;
-        this.p = player;
+        this.player = player;
 
         this.autoRegister(false);
 
-        if (cfg.editVaultGui().borders()) {
+        if (CONFIG.editVaultGui().borders()) {
             for (int i = 0; i < this.inventory.getSize(); i++) {
                 if (this.inventory.getItem(i) == null) {
                     this.inventory.setItem(i, ItemStacks.borderItem());

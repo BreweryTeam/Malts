@@ -12,10 +12,10 @@ public class HelpCommand implements SubCommand {
 
     @SuppressWarnings("UnstableApiUsage")
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         PluginMeta meta = Malts.getInstance().getPluginMeta();
 
-        lng.entry(l -> l.command().help(), sender,
+        LANG.entry(l -> l.command().help(), sender,
                 Couple.of("{version}", meta.getVersion()),
                 Couple.of("{description}", meta.getDescription()),
                 Couple.of("{authors}", meta.getAuthors())
@@ -24,7 +24,7 @@ public class HelpCommand implements SubCommand {
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         return List.of();
     }
 

@@ -11,7 +11,6 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,6 +64,7 @@ public class Lang extends OkaeriFile {
         private String nameChanged;
         private String noAccess;
         private String alreadyOpen;
+        private String databaseBusy;
         private String trustListMaxed;
         private String playerNeverOnServer;
         private String playerTrusted;

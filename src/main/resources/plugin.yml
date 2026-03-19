@@ -7,6 +7,8 @@ author: Jsinco
 description: An open-source and free vaults plugin that incorporates a warehouse for mass item storage.
 website: github.com/BreweryTeam/Malts
 load: POSTWORLD
+softdepend:
+  - PlaceholderAPI
 folia-supported: true
 commands:
   malts:

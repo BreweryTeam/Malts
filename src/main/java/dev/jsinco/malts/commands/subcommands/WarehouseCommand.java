@@ -1,12 +1,11 @@
 package dev.jsinco.malts.commands.subcommands;
 
 import com.google.common.base.Preconditions;
-import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.enums.WarehouseMode;
 import dev.jsinco.malts.gui.WarehouseGui;
-import dev.jsinco.malts.obj.MaltsPlayer;
-import dev.jsinco.malts.obj.Warehouse;
+import dev.jsinco.malts.model.MaltsPlayer;
+import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Util;
@@ -21,7 +20,7 @@ import java.util.List;
 public class WarehouseCommand implements SubCommand {
 
     @Override
-    public boolean execute(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public boolean execute(CommandSender sender, String label, List<String> args) {
         Player player = (Player) sender;
         DataSource dataSource = DataSource.getInstance();
         Warehouse warehouse = dataSource.cachedObject(player.getUniqueId(), Warehouse.class);
@@ -48,7 +47,7 @@ public class WarehouseCommand implements SubCommand {
     }
 
     @Override
-    public List<String> tabComplete(Malts plugin, CommandSender sender, String label, List<String> args) {
+    public List<String> tabComplete(CommandSender sender, String label, List<String> args) {
         Player player = (Player) sender;
         DataSource dataSource = DataSource.getInstance();
         Warehouse warehouse = dataSource.cachedObject(player.getUniqueId(), Warehouse.class);
@@ -104,7 +103,7 @@ public class WarehouseCommand implements SubCommand {
                 if (warehouse.hasCompartment(material)) {
                     warehouse.stockWithInventory(player, player.getInventory(), material, amount);
                 } else {
-                    lng.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+                    LANG.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
                 }
                 return true;
             }
@@ -134,7 +133,7 @@ public class WarehouseCommand implements SubCommand {
                 if (warehouse.hasCompartment(material)) {
                     warehouse.destockToInventory(player, player.getInventory(), material, amount);
                 } else {
-                    lng.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+                    LANG.entry(l -> l.warehouse().compartmentDoesNotExist(), player, Couple.of("{material}", Util.formatEnumerator(material)));
                 }
                 return true;
             }
@@ -159,11 +158,11 @@ public class WarehouseCommand implements SubCommand {
                 }
 
                 if (mode.canUseMode(player)) {
-                    lng.entry(l -> l.warehouse().changedMode(), player, Couple.of("{mode}", Util.formatEnumerator(mode)));
+                    LANG.entry(l -> l.warehouse().changedMode(), player, Couple.of("{mode}", Util.formatEnumerator(mode)));
                     maltsPlayer.setWarehouseMode(mode);
                 } else {
                     // TODO: custom lang entry
-                    lng.entry(l -> l.command().base().noPermission(), player);
+                    LANG.entry(l -> l.command().base().noPermission(), player);
                 }
                 return true;
             }
@@ -179,18 +178,20 @@ public class WarehouseCommand implements SubCommand {
 
 
         public abstract boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args);
+
         public abstract List<String> tabComplete(Player player, Warehouse warehouse, List<String> args);
 
 
         private static boolean evaluateMaterial(Player player, Material material, String materialArg, int amount) {
             if (material == null || !material.isItem()) {
-                lng.entry(l -> l.warehouse().blacklistedItem(), player, Couple.of("{material}", materialArg));
+                LANG.entry(l -> l.warehouse().blacklistedItem(), player, Couple.of("{material}", materialArg));
                 return false;
             } else if (amount <= 0) {
-                lng.entry(l -> l.warehouse().notEnoughMaterial(), player, Couple.of("{material}", Util.formatEnumerator(material)));
+                LANG.entry(l -> l.warehouse().notEnoughMaterial(), player, Couple.of("{material}", Util.formatEnumerator(material)));
                 return false;
             }
             return true;
         }
+
     }
 }

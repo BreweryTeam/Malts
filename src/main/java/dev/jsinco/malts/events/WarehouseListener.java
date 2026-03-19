@@ -1,6 +1,6 @@
 package dev.jsinco.malts.events;
 
-import dev.jsinco.malts.obj.MaltsPlayer;
+import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.storage.DataSource;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
