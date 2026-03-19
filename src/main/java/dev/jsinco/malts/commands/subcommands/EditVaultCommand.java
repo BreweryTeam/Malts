@@ -136,7 +136,10 @@ public class EditVaultCommand implements SubCommand {
             String name = args.getFirst();
             OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(name);
             UUID playerUUID = offlinePlayer.getUniqueId();
-            int trustListCap = ConfigManager.get(Config.class).vaults().trustCap();
+            MaltsPlayer ownerMaltsPlayer = dataSource.cachedObject(vault.getOwner(), MaltsPlayer.class);
+            Preconditions.checkNotNull(ownerMaltsPlayer, "MaltsPlayer should not be null for vault owner.");
+
+            int trustListCap = ownerMaltsPlayer.getTrustCapacity();
             if (!offlinePlayer.hasPlayedBefore()) {
                 LANG.entry(l -> l.vaults().playerNeverOnServer(), sender, Couple.of("{name}", name));
                 return true;

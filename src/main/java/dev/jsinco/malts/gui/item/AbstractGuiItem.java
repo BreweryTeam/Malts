@@ -26,11 +26,25 @@ public abstract class AbstractGuiItem {
         return Util.namespacedKey(name);
     }
 
-    public final ItemStack getItemStack() {
-        if (this.cachedItemStack == null || Malts.isInvalidatedCachedGuiItems()) {
-            this.cachedItemStack = Util.setPersistentKey(itemStack(), key(), PersistentDataType.BOOLEAN, true);
+    public final ItemStack getItemStack(boolean cached) {
+        boolean shouldRebuild = !cached || cachedItemStack == null || Malts.isInvalidatedCachedGuiItems();
+
+        if (shouldRebuild) {
+            ItemStack itemStack = Util.setPersistentKey(itemStack(), key(), PersistentDataType.BOOLEAN, true);
+
+            if (!cached) {
+                return itemStack;
+            }
+
+            this.cachedItemStack = itemStack;
             Malts.setInvalidatedCachedGuiItems(false);
         }
+
         return this.cachedItemStack;
     }
+
+    public final ItemStack getItemStack() {
+        return getItemStack(true);
+    }
+
 }

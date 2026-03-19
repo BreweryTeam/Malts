@@ -25,6 +25,7 @@ public class MaltsPlayer implements CachedObject {
 
     private static final String MAX_VAULTS_PERMISSION_PREFIX = "malts.maxvaults";
     private static final String MAX_WAREHOUSE_STOCK_PERMISSION_PREFIX = "malts.maxstock";
+    private static final String TRUST_CAP_PERMISSION_PREFIX = "malts.override.trustcap";
 
     private static final Config CONFIG = ConfigManager.get(Config.class);
 
@@ -77,6 +78,14 @@ public class MaltsPlayer implements CachedObject {
         int maxByPermission = getMaxByPermission(MAX_WAREHOUSE_STOCK_PERMISSION_PREFIX);
 
         return maxByPermission + maxWarehouseStock + CONFIG.warehouse().defaultMaxStock();
+    }
+
+    public int getTrustCapacity() {
+        int fromPerm = getMaxByPermission(TRUST_CAP_PERMISSION_PREFIX);
+        if (fromPerm > 0) {
+            return fromPerm;
+        }
+        return CONFIG.vaults().trustCap();
     }
 
     private int getMaxByPermission(String permissionPrefix) {

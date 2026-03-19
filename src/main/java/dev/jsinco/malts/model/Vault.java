@@ -37,9 +37,8 @@ import java.util.UUID;
  *
  * <p>
  * Please note: Unlike other objects in malts, vaults are never cached in memory and are always transient.
- *
  * </p>
- * 
+ *
  * @see dev.jsinco.malts.storage.DataSource#getVault(UUID, int) 
  * @see dev.jsinco.malts.storage.DataSource#saveVault(Vault) 
  */
