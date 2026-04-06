@@ -1,5 +1,5 @@
 prefix: '<#b986f9><b>Malts</b></#b986f9> <dark_gray>»</dark_gray> '
-updateAvailable: "A new version of Malts is available! Download it from: <hover:show_text:'Click to download!'><click:open_url:{url}><green><u>Modrinth</u></green></click></hover>. <gray>(v{version})</gray>"
+updateAvailable: "有新版本的 Malts 可以下载！链接：<hover:show_text:'点击下载！'><click:open_url:{url}><green><u>Modrinth</u></green></click></hover>。<gray>(v{version})</gray>"
 
 warehouse:
   notEnoughMaterial: 你没有足够的<aqua><b>{material}</b></aqua>。
@@ -26,7 +26,7 @@ vaults:
   nameChanged: 保险箱名称已改为<aqua><b>{vaultName}</b></aqua>.
   noAccess: 你不能打开这个保险箱。
   alreadyOpen: 这个保险箱当前被其他玩家占用。
-  databaseBusy: This vault is locked because it's currently being saved. Please try again in a moment.
+  databaseBusy: 当前无法打开这个保险箱，请稍等一会。
   trustListMaxed: 你不能再信任更多玩家了。（{trustedListSize}）
   playerNeverOnServer: '{name} 从未加入过服务器。'
   playerTrusted: '{name} 已添加至你的信任列表。'
@@ -39,7 +39,7 @@ vaults:
   vaultNameTooLong: 保险箱名称不能长于 {maxLength} 个字符。
   transferred: 成功从 {name} 转移了 {amount} 个保险箱到 {otherName}。从 {otherName} 转移了 {otherAmount} 个保险箱到 {name}。
   cannotTransfer: 不能在同一玩家之间转移保险箱。
-  iconChanged: Vault icon changed to <aqua><b>{material}</b></aqua>.
+  iconChanged: 保险箱图标已更换为 <aqua><b>{material}</b></aqua>.
 
 gui:
   firstPage: 你已经在第一页了。
@@ -85,13 +85,13 @@ command:
     startImport: 正在从 {importer} 导入保险箱数据...（可能得等上一会！）
     importComplete: 成功导入了 {amount} 个玩家的保险箱，另外有 {failedAmount} 个导入失败。
     failedImport: '导入失败：{uuid} -> {result}'
-    confirmImport: "Are you sure you want to import vaults from <yellow>{importer}</yellow>? This action is non-destructive but may not be easily un-done. Type <hover:show_text:'Click to run.'><click:suggest_command:'/malts import {importer} confirm'><aqua>/malts import {importer} confirm</aqua></click></hover> to confirm."
+    confirmImport: "你确定要导入 <yellow>{importer}</yellow> 的数据吗？操作无破坏性但难以撤销。输入命令 <hover:show_text:'点击执行。'><click:suggest_command:'/malts import {importer} confirm'><aqua>/malts import {importer} confirm</aqua></click></hover> 确认操作。"
   vaultOther:
     noVaultFound: '{name} 没有名为 {id} 的保险箱。'
   reload:
     success: 成功重载了配置文件。
     failed: 试图重载一个或多个配置文件时出错。检查控制台获取更多信息。
-    newDatabaseDriverSet: 配置文件的数据库设置已被更改。Malts 重载后将会从 <red>{driver}</red>通过新方式读取数据。请注意，本插件不会以任何方式转换不同存储方式之间的数据。
+    newDatabaseDriverSet: 配置文件的数据库设置已被更改。Malts 重载后将会从 <red>{driver}</red> 通过新方式读取数据。请注意，本插件不会以任何方式转换不同存储方式之间的数据。
   quickReturn:
     success: 已设置快捷返回选项。
     failed: 你没有输入有效参数或选项。
