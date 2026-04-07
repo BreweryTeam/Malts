@@ -273,7 +273,7 @@ public class Warehouse implements CachedObject {
             LANG.entry(l -> l.warehouse().withdrewItem(), player,
                     Couple.of("{amount}", requestable),
                     Couple.of("{material}", Util.formatEnumerator(material)),
-                    Couple.of("{stock}", String.valueOf(this.getQuantity(material)))
+                    Couple.of("{stock}", available)
             );
             return itemStack;
         } else {
