@@ -19,10 +19,8 @@ public class WarehouseListener implements Listener {
         MaltsPlayer maltsPlayer = dataSource.cachedObject(player.getUniqueId(), MaltsPlayer.class);
         if (maltsPlayer == null) {
             if (expectCached) {
-                dataSource.cacheObject(dataSource.getMaltsPlayer(player.getUniqueId())).thenAccept(cached -> {
-                    // Not sure how they weren't cached, but future events should be fine now.
-                });
-                throw new IllegalStateException("MaltsPlayer is not cached. UUID: " + player.getUniqueId());
+                dataSource.cacheObject(dataSource.getMaltsPlayer(player.getUniqueId()));
+                dataSource.cacheObject(dataSource.getWarehouse(player.getUniqueId()));
             }
             return;
         }

@@ -25,7 +25,6 @@ import dev.jsinco.malts.utility.Text;
 import dev.jsinco.malts.utility.Util;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import lombok.Getter;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -440,14 +439,8 @@ public abstract class DataSource {
         }
 
         instance = config.driver().supply(config); // Set a new instance
-        instance.setup().whenComplete((unused, throwable) -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                UUID uuid = player.getUniqueId();
-                instance.cacheObject(instance.getMaltsPlayer(uuid));
-                instance.cacheObject(instance.getWarehouse(uuid));
-            }
-        }).exceptionally(ex -> {
-            throw new IllegalStateException("An exception/error occurred while setting up the DataSource", ex);
+        instance.setup().exceptionally(ex -> {
+            throw new IllegalStateException("An error occurred while setting up the DataSource", ex);
         });
     }
 }
