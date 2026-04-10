@@ -52,12 +52,6 @@ public class Malts extends JavaPlugin {
         getServer().getPluginCommand("vaultname").setExecutor(new VaultNameBaseCommand());
         getServer().getPluginCommand("vaultsearch").setExecutor(new VaultSearchBaseCommand());
 
-        DataSource dataSource = DataSource.getInstance();
-        for (Player player : getServer().getOnlinePlayers()) {
-            dataSource.cacheObject(dataSource.getMaltsPlayer(player.getUniqueId()));
-            dataSource.cacheObject(dataSource.getWarehouse(player.getUniqueId()));
-        }
-
         getServer().getPluginManager().registerEvents(new PlayerListener(), this);
         getServer().getPluginManager().registerEvents(new VaultListener(), this);
         getServer().getPluginManager().registerEvents(new WarehouseListener(), this);
