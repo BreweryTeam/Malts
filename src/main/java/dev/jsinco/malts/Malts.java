@@ -23,10 +23,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
 public class Malts extends JavaPlugin {
 
     @Getter
@@ -57,13 +53,9 @@ public class Malts extends JavaPlugin {
         getServer().getPluginCommand("vaultsearch").setExecutor(new VaultSearchBaseCommand());
 
         DataSource dataSource = DataSource.getInstance();
-        List<CompletableFuture<?>> cacheFutures = new ArrayList<>();
         for (Player player : getServer().getOnlinePlayers()) {
-            cacheFutures.add(dataSource.cacheObject(dataSource.getMaltsPlayer(player.getUniqueId())));
-            cacheFutures.add(dataSource.cacheObject(dataSource.getWarehouse(player.getUniqueId())));
-        }
-        if (!cacheFutures.isEmpty()) {
-            CompletableFuture.allOf(cacheFutures.toArray(new CompletableFuture[0])).join();
+            dataSource.cacheObject(dataSource.getMaltsPlayer(player.getUniqueId()));
+            dataSource.cacheObject(dataSource.getWarehouse(player.getUniqueId()));
         }
 
         getServer().getPluginManager().registerEvents(new PlayerListener(), this);
