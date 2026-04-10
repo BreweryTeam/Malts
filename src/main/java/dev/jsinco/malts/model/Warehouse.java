@@ -271,9 +271,9 @@ public class Warehouse implements CachedObject {
         if (itemStack != null) {
             inv.addItem(itemStack);
             LANG.entry(l -> l.warehouse().withdrewItem(), player,
-                    Couple.of("{amount}", requestable),
+                    Couple.of("{amount}", toDestock),
                     Couple.of("{material}", Util.formatEnumerator(material)),
-                    Couple.of("{stock}", available)
+                    Couple.of("{stock}", available - toDestock)
             );
             return itemStack;
         } else {
