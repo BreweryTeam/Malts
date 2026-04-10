@@ -37,7 +37,7 @@ public class SearchCommand implements SubCommand {
             return true;
         }
 
-        dataSource.getVaults(player.getUniqueId()).thenAccept(snapshotVaults -> {
+        dataSource.getVaults(player.getUniqueId()).thenAcceptAsync(snapshotVaults -> {
             String name = player != sender ? player.getName() : null;
             List<Vault> vaults = snapshotVaults.stream()
                     .map(v -> v.toVault().join())
