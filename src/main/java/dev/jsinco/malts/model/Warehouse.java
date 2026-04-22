@@ -263,17 +263,13 @@ public class Warehouse implements CachedObject {
             return null;
         }
 
-        // Only for information, nothing to do with actual destocking logic
-        int available = this.getQuantity(material);
-        int requestable = Math.min(amt, available);
-
         ItemStack itemStack = destockItem(material, toDestock);
         if (itemStack != null) {
             inv.addItem(itemStack);
             LANG.entry(l -> l.warehouse().withdrewItem(), player,
                     Couple.of("{amount}", toDestock),
                     Couple.of("{material}", Util.formatEnumerator(material)),
-                    Couple.of("{stock}", available - toDestock)
+                    Couple.of("{stock}", this.getQuantity(material))
             );
             return itemStack;
         } else {
