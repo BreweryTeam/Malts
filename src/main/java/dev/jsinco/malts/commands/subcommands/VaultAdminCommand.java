@@ -1,6 +1,5 @@
 package dev.jsinco.malts.commands.subcommands;
 
-import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Vault;
@@ -9,18 +8,28 @@ import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Util;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class VaultAdminCommand implements SubCommand {
+
+    private static final List<String> ICON_MATERIAL_NAMES = Arrays.stream(Material.values())
+            .filter(Material::isItem)
+            .map(material -> material.name().toLowerCase())
+            .toList();
+
     @Override
     public boolean execute(CommandSender sender, String label, List<String> args) {
         if (args.size() < 2) {
@@ -44,14 +53,19 @@ public class VaultAdminCommand implements SubCommand {
             case 1 -> Stream.of(ArgOption.values()).map(it -> it.toString().toLowerCase()).toList();
             case 3 -> {
                 ArgOption option = Util.getEnum(args.getFirst(), ArgOption.class);
-                if (option == null) {
-                    yield null;
-                }
+                if (option == null) yield null;
                 OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(args.get(1));
                 List<String> newArgs = args.subList(2, args.size());
                 yield option.getTabCompleter().handle(sender, label, newArgs, offlinePlayer);
             }
-            default -> null;
+            default -> {
+                if (args.size() < 4) yield null;
+                ArgOption option = Util.getEnum(args.getFirst(), ArgOption.class);
+                if (option != ArgOption.EDIT) yield null;
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(args.get(1));
+                List<String> newArgs = args.subList(2, args.size());
+                yield option.getTabCompleter().handle(sender, label, newArgs, offlinePlayer);
+            }
         };
     }
 
@@ -148,6 +162,44 @@ public class VaultAdminCommand implements SubCommand {
             SearchCommand searchCommand = Registry.SUB_COMMANDS.get(SearchCommand.class);
 
             return searchCommand.tabComplete(sender, label, Util.plusFirstIndex(args, "-player", offlinePlayer.getName()));
+        }),
+        EDIT((sender, label, args, offlinePlayer) -> {
+            if (args.size() < 2) return false;
+
+            DataSource dataSource = DataSource.getInstance();
+            int vaultId = Util.getInteger(args.getFirst(), -1);
+            if (vaultId <= 0) return false;
+
+            EditOption editOption = Util.getEnum(args.get(1), EditOption.class);
+            if (editOption == null) return false;
+
+            List<String> newArgs = args.subList(2, args.size());
+            dataSource.getVault(offlinePlayer.getUniqueId(), vaultId, false).thenAccept(vault -> {
+                if (vault == null) {
+                    LANG.entry(l -> l.vaults().noVaultFound(), sender);
+                    return;
+                }
+                boolean result = editOption.getExecutor().handle(dataSource, sender, vault, newArgs);
+                if (!result) {
+                    LANG.entry(l -> l.command().base().invalidUsage(), sender);
+                }
+            });
+            return true;
+        }, (sender, label, args, offlinePlayer) -> switch (args.size()) {
+            case 1 -> {
+                MaltsPlayer maltsPlayer = DataSource.getInstance().cachedObject(offlinePlayer.getUniqueId(), MaltsPlayer.class);
+                if (maltsPlayer == null) yield Util.tryGetNextNumberArg(args.getFirst());
+                yield IntStream.rangeClosed(1, maltsPlayer.getCalculatedMaxVaults())
+                        .mapToObj(String::valueOf)
+                        .collect(Collectors.toList());
+            }
+            case 2 -> Stream.of(EditOption.values()).map(it -> it.toString().toLowerCase()).toList();
+            case 3 -> {
+                EditOption editOption = Util.getEnum(args.get(1), EditOption.class);
+                if (editOption == null) yield List.of();
+                yield editOption.getTabCompleter().handle(offlinePlayer.getUniqueId());
+            }
+            default -> List.of();
         })
         ;
 
@@ -165,6 +217,58 @@ public class VaultAdminCommand implements SubCommand {
 
         private interface TabCompleter {
             List<String> handle(CommandSender sender, String label, List<String> args, OfflinePlayer offlinePlayer);
+        }
+    }
+
+    @Getter
+    @AllArgsConstructor
+    private enum EditOption {
+        NAME((dataSource, sender, vault, args) -> {
+            if (args.isEmpty()) return false;
+            String newName = String.join(" ", args);
+            vault.forceSetCustomName(newName);
+            LANG.entry(l -> l.vaults().nameChanged(), sender, Couple.of("{vaultName}", newName));
+            dataSource.saveVault(vault);
+            return true;
+        }, ownerUuid -> List.of()),
+        ICON((dataSource, sender, vault, args) -> {
+            if (args.isEmpty()) return false;
+            Material material = Util.getEnum(args.getFirst(), Material.class);
+            if (material == null || !material.isItem()) return false;
+            vault.forceSetIcon(material);
+            dataSource.saveVault(vault);
+            LANG.entry(l -> l.vaults().iconChanged(), sender, Couple.of("{material}", Util.formatEnumerator(material)));
+            return true;
+        }, ownerUuid -> ICON_MATERIAL_NAMES),
+        TRUST((dataSource, sender, vault, args) -> {
+            if (args.isEmpty()) return false;
+            String name = args.getFirst();
+            OfflinePlayer target = Bukkit.getOfflinePlayer(name);
+            UUID targetUUID = target.getUniqueId();
+            if (!target.hasPlayedBefore()) {
+                LANG.entry(l -> l.vaults().playerNeverOnServer(), sender, Couple.of("{name}", name));
+                return true;
+            }
+            if (vault.getTrustedPlayers().contains(targetUUID)) {
+                vault.getTrustedPlayers().remove(targetUUID);
+                LANG.entry(l -> l.vaults().playerUntrusted(), sender, Couple.of("{name}", name));
+            } else {
+                vault.getTrustedPlayers().add(targetUUID);
+                LANG.entry(l -> l.vaults().playerTrusted(), sender, Couple.of("{name}", name));
+            }
+            dataSource.saveVault(vault);
+            return true;
+        }, ownerUuid -> Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
+
+        private final EditHandler executor;
+        private final EditTabCompleter tabCompleter;
+
+        private interface EditHandler {
+            boolean handle(DataSource dataSource, CommandSender sender, Vault vault, List<String> args);
+        }
+
+        private interface EditTabCompleter {
+            List<String> handle(UUID ownerUuid);
         }
     }
 }

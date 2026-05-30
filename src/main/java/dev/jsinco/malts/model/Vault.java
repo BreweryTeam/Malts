@@ -314,6 +314,10 @@ public class Vault implements MaltsInventory {
         return true;
     }
 
+    public void forceSetCustomName(@NotNull String customName) {
+        this.customName = customName;
+    }
+
     /**
      * Sets the icon of this vault.
      * @param icon the new icon
@@ -325,6 +329,10 @@ public class Vault implements MaltsInventory {
 
         this.icon = event.getNewIcon();
         return true;
+    }
+
+    public void forceSetIcon(@NotNull Material icon) {
+        this.icon = icon;
     }
 
     /**
