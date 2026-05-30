@@ -54,7 +54,9 @@ public class VaultAdminCommand implements SubCommand {
             case 3 -> {
                 ArgOption option = Util.getEnum(args.getFirst(), ArgOption.class);
                 if (option == null) yield null;
-                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(args.get(1));
+                String playerName = args.get(1);
+                if (playerName.isEmpty()) yield null;
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
                 List<String> newArgs = args.subList(2, args.size());
                 yield option.getTabCompleter().handle(sender, label, newArgs, offlinePlayer);
             }
@@ -62,7 +64,9 @@ public class VaultAdminCommand implements SubCommand {
                 if (args.size() < 4) yield null;
                 ArgOption option = Util.getEnum(args.getFirst(), ArgOption.class);
                 if (option != ArgOption.EDIT) yield null;
-                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(args.get(1));
+                String playerName = args.get(1);
+                if (playerName.isEmpty()) yield null;
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(playerName);
                 List<String> newArgs = args.subList(2, args.size());
                 yield option.getTabCompleter().handle(sender, label, newArgs, offlinePlayer);
             }
