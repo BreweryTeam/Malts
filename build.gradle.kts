@@ -10,7 +10,7 @@ plugins {
     id("maven-publish")
     id("com.gradleup.shadow") version "8.3.5"
     id("io.papermc.hangar-publish-plugin") version "0.1.2"
-    id("com.modrinth.minotaur") version "2.8.7"
+    id("com.modrinth.minotaur") version "2.+"
     id("xyz.jpenilla.run-paper") version "2.3.1"
     id("io.freefair.lombok") version "9.1.0"
 }
@@ -127,8 +127,8 @@ modrinth {
     versionNumber.set(project.version.toString())
     versionType.set("release")
     uploadFile.set(tasks.shadowJar)
-    loaders.addAll("paper", "purpur")
-    gameVersions.addAll(listOf("1.21.10", "1.21.9","1.21.8", "1.21.7", "1.21.4", "1.21.1", "1.20.6", "1.20.4"))
+    loaders.addAll( "paper", "purpur", "folia")
+    gameVersions.addAll(listOf("26.2", "26.1.2", "1.21.11", "1.21.10", "1.21.8", "1.21.4", "1.21.1", "1.20.6", "1.20.4"))
     changelog.set(System.getenv("CHANGE_LOG") ?: "No changelog provided.")
 }
 
@@ -142,7 +142,7 @@ hangarPublish {
         platforms {
             register(Platforms.PAPER) {
                 jar.set(tasks.shadowJar.flatMap { it.archiveFile })
-                platformVersions.set(listOf("1.21.x", "1.20.x"))
+                platformVersions.set(listOf("26.2", "26.1.x", "1.21.x", "1.20.x"))
             }
         }
     }
