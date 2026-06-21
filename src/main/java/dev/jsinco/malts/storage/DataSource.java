@@ -91,6 +91,8 @@ public abstract class DataSource {
 
     // Abstract Utility
 
+    protected abstract CompletableFuture<Void> saveCachedObjects(Collection<CachedObject> objects);
+
     public CompletableFuture<@NotNull Vault> getVault(UUID owner, int id) {
         return getVault(owner, id, true);
     }
@@ -149,23 +151,31 @@ public abstract class DataSource {
         AtomicInteger count = new AtomicInteger(0);
         return this.createTables().thenRun(() -> this.cacheTask = Executors.runRepeatingAsync(TASK_INTERVAL_SECONDS, TimeUnit.SECONDS, task -> {
             int intervalCount = count.getAndAdd(TASK_INTERVAL_SECONDS);
+            boolean shouldSave = intervalCount >= SAVE_INTERVAL_SECONDS;
+
+            List<CachedObject> toSave = new ArrayList<>();
+            List<CachedObject> toRemove = new ArrayList<>();
 
             for (CachedObject cachedObject : cachedObjects) {
-                if (intervalCount >= SAVE_INTERVAL_SECONDS) {
-                    Text.debug("Cached Objects size: " + cachedObjects.size());
-                    Text.debug("Saved CachedObject " + cachedObject.getClass().getSimpleName() + ": " + cachedObject.getUuid());
-                    cachedObject.save(this);
-                }
-
                 if (cachedObject.isExpired()) {
-                    cachedObject.save(this);
-                    cachedObjects.remove(cachedObject);
-                    //new CachedObjectEvent(this, cachedObject, EventAction.REMOVE).callEvent();
-                    Text.debug("Uncached " + cachedObject.getClass().getSimpleName() + ": " + cachedObject.getUuid() + " because it was expired");
+                    toSave.add(cachedObject);
+                    toRemove.add(cachedObject);
+                } else if (shouldSave) {
+                    toSave.add(cachedObject);
                 }
             }
 
-            if (intervalCount >= SAVE_INTERVAL_SECONDS) {
+            if (!toSave.isEmpty()) {
+                Text.debug("Cached Objects size: " + cachedObjects.size());
+                saveCachedObjects(toSave).thenRun(() -> {
+                    for (CachedObject obj : toRemove) {
+                        cachedObjects.remove(obj);
+                        Text.debug("Uncached " + obj.getClass().getSimpleName() + ": " + obj.getUuid() + " because it was expired");
+                    }
+                });
+            }
+
+            if (shouldSave) {
                 count.set(0);
             }
         }));
@@ -185,17 +195,8 @@ public abstract class DataSource {
     }
 
     public CompletableFuture<Void> clearCache() {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-        for (CachedObject cachedObject : cachedObjects) {
-            // Assuming save() returns a CompletableFuture<Void>
-            futures.add(cachedObject.save(this));
-        }
-
-        cachedObjects.clear();
-
-        // Combine all save futures into one that completes when all are done
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        List<CachedObject> snapshot = new ArrayList<>(cachedObjects);
+        return saveCachedObjects(snapshot).thenRun(cachedObjects::clear);
     }
 
     // TODO: Better logging
@@ -352,26 +353,23 @@ public abstract class DataSource {
     }
 
     private <T extends CachedObject> CompletableFuture<T> cacheObjectInternal(CompletableFuture<T> future, Long expireTime) {
-        return future.thenCompose(obj -> {
+        return future.thenApply(obj -> {  // thenApply instead of thenCompose — no async submission here
             if (obj == null) {
-                return CompletableFuture.completedFuture(null);
+                return null;
             }
 
-            // First, try to find a cached version
             synchronized (cachedObjects) {
                 for (CachedObject cached : cachedObjects) {
                     if (cached.getClass().equals(obj.getClass()) &&
                             cached.getUuid().equals(obj.getUuid())) {
-
                         @SuppressWarnings("unchecked")
                         T alreadyCached = (T) cached;
                         if (expireTime != null) {
                             long expireWhen = System.currentTimeMillis() + expireTime;
-                            alreadyCached.setExpire(expireWhen); // Update expire time
-                            Text.debug("Updated expire time for cached " + obj.getClass().getSimpleName() + ": " + obj.getUuid() + " to " + expireWhen);
+                            alreadyCached.setExpire(expireWhen);
                         }
                         Text.debug("Using cached " + obj.getClass().getSimpleName() + ": " + obj.getUuid());
-                        return CompletableFuture.completedFuture(alreadyCached);
+                        return alreadyCached;
                     }
                 }
             }
@@ -381,6 +379,7 @@ public abstract class DataSource {
                 long expireWhen = System.currentTimeMillis() + expireTime;
                 obj.setExpire(expireWhen);
             }
+
             synchronized (cachedObjects) {
                 cachedObjects.add(obj);
                 //new CachedObjectEvent(this, obj, EventAction.ADD).callEvent();
@@ -388,7 +387,7 @@ public abstract class DataSource {
 
             String expireMsg = obj.getExpire() != null ? " until " + obj.getExpire() : "";
             Text.debug("Caching " + obj.getClass().getSimpleName() + ": " + obj.getUuid() + expireMsg);
-            return CompletableFuture.completedFuture(obj);
+            return obj;
         });
     }
 

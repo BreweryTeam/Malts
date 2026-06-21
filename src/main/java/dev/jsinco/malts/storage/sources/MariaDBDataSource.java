@@ -2,6 +2,7 @@ package dev.jsinco.malts.storage.sources;
 
 import com.zaxxer.hikari.HikariConfig;
 import dev.jsinco.malts.configuration.files.Config;
+import dev.jsinco.malts.model.CachedObject;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.SnapshotVault;
 import dev.jsinco.malts.model.Stock;
@@ -54,6 +55,15 @@ public class MariaDBDataSource extends DataSource {
             }
             return null;
         });
+    }
+
+    @Override
+    protected CompletableFuture<Void> saveCachedObjects(Collection<CachedObject> objects) {
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (CachedObject obj : objects) {
+            futures.add(obj.save(this));
+        }
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
     @Override

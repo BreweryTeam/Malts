@@ -2,6 +2,7 @@ package dev.jsinco.malts.storage.sources;
 
 import com.zaxxer.hikari.HikariConfig;
 import dev.jsinco.malts.configuration.files.Config;
+import dev.jsinco.malts.model.CachedObject;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.SnapshotVault;
 import dev.jsinco.malts.model.Stock;
@@ -53,8 +54,17 @@ public class SQLiteDataSource extends DataSource {
         hikariConfig.setPoolName("MaltsSQLite");
         hikariConfig.setDriverClassName("org.sqlite.JDBC");
         hikariConfig.setJdbcUrl("jdbc:sqlite:" + file);
-        hikariConfig.setMaximumPoolSize(10);
+        hikariConfig.setMaximumPoolSize(1);
         return hikariConfig;
+    }
+
+    @Override
+    protected CompletableFuture<Void> saveCachedObjects(Collection<CachedObject> objects) {
+        CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
+        for (CachedObject obj : objects) {
+            chain = chain.thenCompose(v -> obj.save(this));
+        }
+        return chain;
     }
 
     // TODO: Better logging

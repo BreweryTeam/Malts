@@ -1,6 +1,5 @@
 package dev.jsinco.malts.commands.subcommands;
 
-import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.ArgumentFlagReader;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.model.Vault;
