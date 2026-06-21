@@ -67,14 +67,14 @@ public final class Executors {
     // Synchronous
 
     public static ScheduledTask delayedSync(Location location, long delay, Runnable runnable) {
-        return Bukkit.getRegionScheduler().runDelayed(INSTANCE, location, t -> runnable.run(), Math.min(delay, MIN_DELAY));
+        return Bukkit.getRegionScheduler().runDelayed(INSTANCE, location, t -> runnable.run(), Math.max(delay, MIN_DELAY));
     }
     public static ScheduledTask delayedSync(Entity entity, long delay, Runnable runnable) {
-        return entity.getScheduler().runDelayed(INSTANCE, t -> runnable.run(), null, Math.min(delay, MIN_DELAY));
+        return entity.getScheduler().runDelayed(INSTANCE, t -> runnable.run(), null, Math.max(delay, MIN_DELAY));
     }
 
     public static ScheduledTask delayedSync(long delay, Runnable runnable) {
-        return Bukkit.getGlobalRegionScheduler().runDelayed(INSTANCE, (t) -> runnable.run(), Math.min(delay, MIN_DELAY));
+        return Bukkit.getGlobalRegionScheduler().runDelayed(INSTANCE, (t) -> runnable.run(), Math.max(delay, MIN_DELAY));
     }
 
     public static ScheduledTask sync(Location location, Runnable runnable) {
