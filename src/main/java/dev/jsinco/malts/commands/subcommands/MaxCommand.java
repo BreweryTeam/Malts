@@ -1,6 +1,5 @@
 package dev.jsinco.malts.commands.subcommands;
 
-import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
@@ -87,8 +86,8 @@ public class MaxCommand implements SubCommand {
     }
 
     enum Operation {
-        ADD((x, y) -> x + y),
-        SET((x, y) -> x),
+        ADD(Integer::sum),
+        SET((x, y) -> y),
         REMOVE((x, y) -> x - y);
 
         interface OperationFunction {
