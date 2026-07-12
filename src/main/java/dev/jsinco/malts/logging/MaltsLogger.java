@@ -2,6 +2,7 @@ package dev.jsinco.malts.logging;
 
 import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Config;
+import dev.jsinco.malts.enums.WarehouseMode;
 import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Executors;
@@ -10,6 +11,7 @@ import dev.jsinco.malts.utility.Util;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -123,15 +125,75 @@ public final class MaltsLogger {
         }
     }
 
-    public void logWarehouse(LogAction action, UUID owner, Material material, int amount) {
+    public void logWarehouse(LogAction action, CommandSender actor, UUID owner, Material material, int amount) {
         if (amount <= 0 || !actionEnabled(action)) {
             return;
         }
         boolean stock = action == LogAction.WAREHOUSE_STOCK;
         String verb = stock ? "stocked" : "destocked";
         String direction = stock ? "into" : "from";
-        log(action, actor(owner) + " " + verb + " " + amount + "x " + Util.formatEnumerator(material)
-                + " " + direction + " warehouse");
+        log(action, actorOrOwner(actor, owner) + " " + verb + " " + amount + "x " + Util.formatEnumerator(material)
+                + " " + direction + " warehouse" + ownerSuffix(actor, owner));
+    }
+
+    public void logWarehouseCompartment(LogAction action, CommandSender actor, UUID owner, Material material) {
+        if (!actionEnabled(action)) {
+            return;
+        }
+        boolean add = action == LogAction.WAREHOUSE_ADD;
+        String verb = add ? "added" : "removed";
+        String direction = add ? "to" : "from";
+        log(action, actorOrOwner(actor, owner) + " " + verb + " compartment " + Util.formatEnumerator(material)
+                + " " + direction + " warehouse" + ownerSuffix(actor, owner));
+    }
+
+    public void logWarehouseMode(CommandSender actor, UUID owner, WarehouseMode from, WarehouseMode to) {
+        if (!actionEnabled(LogAction.WAREHOUSE_MODE)) {
+            return;
+        }
+        log(LogAction.WAREHOUSE_MODE, actor(actor) + " changed warehouse mode from " + from.name()
+                + " to " + to.name() + ownerSuffix(actor, owner));
+    }
+
+    public void logVaultIcon(CommandSender actor, Vault vault, Material from, Material to) {
+        if (!actionEnabled(LogAction.VAULT_EDIT_ICON)) {
+            return;
+        }
+        log(LogAction.VAULT_EDIT_ICON, actor(actor) + " changed icon of vault " + vault.getId()
+                + " from " + Util.formatEnumerator(from) + " to " + Util.formatEnumerator(to)
+                + ownerSuffix(actor, vault.getOwner()));
+    }
+
+    public void logVaultName(CommandSender actor, Vault vault, String from, String to) {
+        if (!actionEnabled(LogAction.VAULT_EDIT_NAME)) {
+            return;
+        }
+        log(LogAction.VAULT_EDIT_NAME, actor(actor) + " renamed vault " + vault.getId()
+                + " from \"" + from + "\" to \"" + to + "\"" + ownerSuffix(actor, vault.getOwner()));
+    }
+
+    public void logVaultTrust(CommandSender actor, Vault vault, UUID target, boolean trusted) {
+        if (!actionEnabled(LogAction.VAULT_EDIT_TRUST)) {
+            return;
+        }
+        String verb = trusted ? "trusted" : "untrusted";
+        log(LogAction.VAULT_EDIT_TRUST, actor(actor) + " " + verb + " " + actor(target)
+                + " on vault " + vault.getId() + ownerSuffix(actor, vault.getOwner()));
+    }
+
+    public void logVaultDelete(CommandSender actor, UUID owner, int vaultId) {
+        if (!actionEnabled(LogAction.VAULT_DELETE)) {
+            return;
+        }
+        log(LogAction.VAULT_DELETE, actor(actor) + " deleted vault " + vaultId + ownerSuffix(actor, owner));
+    }
+
+    public void logVaultTransfer(CommandSender actor, UUID first, int firstCount, UUID second, int secondCount) {
+        if (!actionEnabled(LogAction.VAULT_TRANSFER)) {
+            return;
+        }
+        log(LogAction.VAULT_TRANSFER, actor(actor) + " transferred vaults between "
+                + actor(first) + " (" + firstCount + ") and " + actor(second) + " (" + secondCount + ")");
     }
 
     private void log(LogAction action, String message) {
@@ -359,6 +421,24 @@ public final class MaltsLogger {
     private static String actor(UUID uuid) {
         Player online = Bukkit.getPlayer(uuid);
         return (online != null ? online.getName() : uuid.toString()) + " (" + uuid + ")";
+    }
+
+    private static String actor(CommandSender sender) {
+        if (sender instanceof HumanEntity human) {
+            return actor(human);
+        }
+        return sender.getName();
+    }
+
+    private static String actorOrOwner(CommandSender actor, UUID owner) {
+        return actor != null ? actor(actor) : actor(owner);
+    }
+
+    private static String ownerSuffix(CommandSender actor, UUID owner) {
+        if (actor == null || (actor instanceof HumanEntity human && human.getUniqueId().equals(owner))) {
+            return "";
+        }
+        return " (owner=" + actor(owner) + ")";
     }
 
     private static Map<ItemStack, Integer> counts(ItemStack[] contents) {

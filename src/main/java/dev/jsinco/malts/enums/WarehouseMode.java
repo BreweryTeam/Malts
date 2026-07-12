@@ -43,7 +43,7 @@ public enum WarehouseMode {
         }
 
         Lang lang = ConfigManager.get(Lang.class);
-        int deposited = warehouse.stockItem(material, itemStack.getAmount());
+        int deposited = warehouse.stockItem(event.getPlayer(), material, itemStack.getAmount());
         int remainder = itemStack.getAmount() - deposited;
 
         if (deposited < 1) {
@@ -95,7 +95,7 @@ public enum WarehouseMode {
             return;
         }
 
-        ItemStack item = warehouse.destockItem(material, invAmt);
+        ItemStack item = warehouse.destockItem(player, material, invAmt);
         if (item != null) {
             int amt = item.getAmount();
             inv.addItem(item);
@@ -143,7 +143,7 @@ public enum WarehouseMode {
         Executors.delayedSync(player, 1, () -> {
             ItemStack itemInHand = player.getInventory().getItem(hand);
 
-            ItemStack item = warehouse.destockItem(material, itemInHand.getMaxStackSize() - itemInHand.getAmount());
+            ItemStack item = warehouse.destockItem(player, material, itemInHand.getMaxStackSize() - itemInHand.getAmount());
             if (item == null) {
                 return;
             }

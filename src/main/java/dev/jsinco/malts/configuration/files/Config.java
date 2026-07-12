@@ -239,12 +239,24 @@ public class Config extends OkaeriFile {
         @Comment("Should we log player vault and warehouse actions?")
         private boolean enabled = false;
 
-        @Comment("Which actions should be logged? [VAULT_DEPOSIT, VAULT_WITHDRAW, WAREHOUSE_STOCK, WAREHOUSE_DESTOCK]")
+        @Comment({
+                "Which actions should be logged? Remove any you don't care about.",
+                "* Warehouse: WAREHOUSE_ADD, WAREHOUSE_REMOVE, WAREHOUSE_STOCK, WAREHOUSE_DESTOCK, WAREHOUSE_MODE",
+                "* Vault: VAULT_DEPOSIT, VAULT_WITHDRAW, VAULT_EDIT_ICON, VAULT_EDIT_NAME, VAULT_EDIT_TRUST, VAULT_TRANSFER, VAULT_DELETE"
+        })
         private List<LogAction> loggedActions = List.of(
+                LogAction.WAREHOUSE_ADD,
+                LogAction.WAREHOUSE_REMOVE,
+                LogAction.WAREHOUSE_STOCK,
+                LogAction.WAREHOUSE_DESTOCK,
+                LogAction.WAREHOUSE_MODE,
                 LogAction.VAULT_DEPOSIT,
                 LogAction.VAULT_WITHDRAW,
-                LogAction.WAREHOUSE_STOCK,
-                LogAction.WAREHOUSE_DESTOCK
+                LogAction.VAULT_EDIT_ICON,
+                LogAction.VAULT_EDIT_NAME,
+                LogAction.VAULT_EDIT_TRUST,
+                LogAction.VAULT_TRANSFER,
+                LogAction.VAULT_DELETE
         );
 
         @Comment("How much detail should we record for items? [BASIC, DETAILED]")
