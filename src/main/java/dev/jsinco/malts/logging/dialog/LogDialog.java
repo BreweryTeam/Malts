@@ -143,7 +143,7 @@ public final class LogDialog {
         DialogBase base = DialogBase.builder(Component.text("Malts Logs: Date & Time", NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
                 .body(List.of(DialogBody.plainMessage(
-                        Component.text("Set the date and time range. Blank To date = same as From; blank times = ignore.",
+                        Component.text("Date and time range. Blank To date = same as From; blank times = ignore.",
                                 NamedTextColor.GRAY), BODY_WIDTH)))
                 .inputs(dateTimeInputs(session.filter))
                 .build();
