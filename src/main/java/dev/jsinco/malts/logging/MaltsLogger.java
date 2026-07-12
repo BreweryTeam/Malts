@@ -16,8 +16,10 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -25,7 +27,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,20 +37,26 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public final class MaltsLogger {
 
     private static final String LOGS_DIR = "logs";
     private static final Pattern DATE_PREFIX = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})");
+
+    public static final int MAX_QUERY_RESULTS = 5000;
 
     private static MaltsLogger instance;
 
@@ -108,7 +118,7 @@ public final class MaltsLogger {
         Set<ItemStack> keys = new HashSet<>(beforeCounts.keySet());
         keys.addAll(afterCounts.keySet());
 
-        String ownerSuffix = player.getUniqueId().equals(vault.getOwner()) ? "" : " (owner=" + vault.getOwner() + ")";
+        String ownerSuffix = player.getUniqueId().equals(vault.getOwner()) ? "" : " (owner=" + actor(vault.getOwner()) + ")";
 
         LogDetail detail = config().detail();
         List<String> pdcKeys = config().loggedPersistentDataKeys();
@@ -223,6 +233,47 @@ public final class MaltsLogger {
         } catch (Exception e) {
             Text.error("Failed to flush Malts logs", e);
         }
+    }
+
+    public CompletableFuture<LogQueryResult> query(LogFilter filter) {
+        CompletableFuture<LogQueryResult> future = new CompletableFuture<>();
+        if (shuttingDown) {
+            future.complete(new LogQueryResult(List.of(), 0, false, false));
+            return future;
+        }
+        try {
+            writer.execute(() -> {
+                try {
+                    future.complete(runQuery(filter));
+                } catch (Throwable t) {
+                    Text.error("Failed to query Malts logs", t);
+                    future.complete(new LogQueryResult(List.of(), 0, false, false));
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            future.complete(new LogQueryResult(List.of(), 0, false, false));
+        }
+        return future;
+    }
+
+    public CompletableFuture<Void> flushAsync() {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        if (shuttingDown) {
+            future.complete(null);
+            return future;
+        }
+        try {
+            writer.execute(() -> {
+                try {
+                    flush();
+                } finally {
+                    future.complete(null);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            future.complete(null);
+        }
+        return future;
     }
 
     private void flush() {
@@ -419,8 +470,16 @@ public final class MaltsLogger {
     }
 
     private static String actor(UUID uuid) {
+        String name = nameOf(uuid);
+        return name != null ? name + " (" + uuid + ")" : uuid.toString();
+    }
+
+    private static String nameOf(UUID uuid) {
         Player online = Bukkit.getPlayer(uuid);
-        return (online != null ? online.getName() : uuid.toString()) + " (" + uuid + ")";
+        if (online != null) {
+            return online.getName();
+        }
+        return Bukkit.getOfflinePlayer(uuid).getName();
     }
 
     private static String actor(CommandSender sender) {
@@ -439,6 +498,94 @@ public final class MaltsLogger {
             return "";
         }
         return " (owner=" + actor(owner) + ")";
+    }
+
+    private LogQueryResult runQuery(LogFilter filter) {
+        LogLines.Compiled compiled;
+        try {
+            compiled = LogLines.compile(filter);
+        } catch (PatternSyntaxException e) {
+            return LogQueryResult.ofInvalidRegex();
+        }
+
+        Map<LocalDate, List<LogLines.Parsed>> bufferByDate = new HashMap<>();
+        for (LogEntry entry : buffer) {
+            LocalDate date = entry.timestamp().toLocalDate();
+            if (date.isBefore(filter.from()) || date.isAfter(filter.to())) {
+                continue;
+            }
+            LogLines.Parsed parsed = new LogLines.Parsed(date, entry.timestamp().toLocalTime(), entry.action(), entry.render());
+            if (LogLines.matches(parsed, filter, compiled)) {
+                bufferByDate.computeIfAbsent(date, d -> new ArrayList<>()).add(parsed);
+            }
+        }
+
+        List<LogQueryResult.Line> lines = new ArrayList<>();
+        int total = 0;
+        boolean capped = false;
+
+        for (LocalDate date = filter.to(); !date.isBefore(filter.from()); date = date.minusDays(1)) {
+            List<LogLines.Parsed> dayMatches = new ArrayList<>();
+            for (Path file : filesForDate(date)) {
+                readMatching(file, date, filter, compiled, dayMatches);
+            }
+            List<LogLines.Parsed> buffered = bufferByDate.get(date);
+            if (buffered != null) {
+                dayMatches.addAll(buffered);
+            }
+            dayMatches.sort(Comparator.comparing(
+                    (LogLines.Parsed p) -> p.time() == null ? LocalTime.MIN : p.time()).reversed());
+
+            for (LogLines.Parsed parsed : dayMatches) {
+                total++;
+                if (lines.size() < MAX_QUERY_RESULTS) {
+                    lines.add(new LogQueryResult.Line(parsed.date(), parsed.raw()));
+                } else {
+                    capped = true;
+                }
+            }
+        }
+
+        return new LogQueryResult(lines, total, capped, false);
+    }
+
+    private List<Path> filesForDate(LocalDate date) {
+        List<Path> files = new ArrayList<>();
+        if (!Files.isDirectory(logsDir)) {
+            return files;
+        }
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(logsDir, date + "*.log*")) {
+            for (Path path : stream) {
+                String name = path.getFileName().toString();
+                if (name.endsWith(".log") || name.endsWith(".log.gz")) {
+                    files.add(path);
+                }
+            }
+        } catch (IOException e) {
+            Text.error("Failed to list Malts log files for " + date, e);
+        }
+        return files;
+    }
+
+    private void readMatching(Path file, LocalDate date, LogFilter filter, LogLines.Compiled compiled,
+                              List<LogLines.Parsed> out) {
+        boolean gzip = file.getFileName().toString().endsWith(".gz");
+        try (InputStream in = Files.newInputStream(file);
+             InputStream decoded = gzip ? new GZIPInputStream(in) : in;
+             BufferedReader reader = new BufferedReader(new InputStreamReader(decoded, StandardCharsets.UTF_8))) {
+            String raw;
+            while ((raw = reader.readLine()) != null) {
+                if (raw.isEmpty()) {
+                    continue;
+                }
+                LogLines.Parsed parsed = LogLines.parse(date, raw);
+                if (LogLines.matches(parsed, filter, compiled)) {
+                    out.add(parsed);
+                }
+            }
+        } catch (IOException e) {
+            Text.error("Failed to read Malts log file: " + file.getFileName(), e);
+        }
     }
 
     private static Map<ItemStack, Integer> counts(ItemStack[] contents) {

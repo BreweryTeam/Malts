@@ -30,7 +30,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT") // repo.papermc.io
+    compileOnly("io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT") // repo.papermc.io
     compileOnly("org.xerial:sqlite-jdbc:3.47.2.0") // mavenCentral
     compileOnly("org.jetbrains:annotations:26.0.2-1") // mavenCentral
     compileOnly("com.drtshock.playervaults:PlayerVaultsX:4.4.7") // repo.jsinco.dev
