@@ -6,6 +6,7 @@ import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.OkaeriFile;
 import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.integration.compiled.UpdateCheckIntegration;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
@@ -42,6 +43,7 @@ public class ReloadCommand implements SubCommand {
                 });
             }
 
+            MaltsLogger.init();
             Malts.setInvalidatedCachedGuiItems(true);
         } catch (Throwable e) {
             Text.error("An exception/error occurred while reloading Malts configuration", e);

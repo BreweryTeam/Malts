@@ -11,6 +11,8 @@ import dev.jsinco.malts.configuration.files.GuiConfig;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.enums.TriState;
 import dev.jsinco.malts.gui.item.GuiItem;
+import dev.jsinco.malts.logging.LogAction;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Text;
@@ -101,6 +103,10 @@ public class Warehouse implements CachedObject {
             warehouseMap.put(material, new Stock(material, amt));
         }
 
+        MaltsLogger logger = MaltsLogger.get();
+        if (logger != null) {
+            logger.logWarehouse(LogAction.WAREHOUSE_STOCK, owner, material, amt);
+        }
         return amt;
     }
 
@@ -131,6 +137,11 @@ public class Warehouse implements CachedObject {
         }
 
         stock.decrease(finalAmt);
+
+        MaltsLogger logger = MaltsLogger.get();
+        if (logger != null) {
+            logger.logWarehouse(LogAction.WAREHOUSE_DESTOCK, owner, material, finalAmt);
+        }
         return ItemStack.of(material, finalAmt);
     }
 
