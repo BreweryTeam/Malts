@@ -3,6 +3,7 @@ package dev.jsinco.malts.commands.subcommands;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.logging.dialog.LogDialog;
+import dev.jsinco.malts.utility.ClassUtil;
 import dev.jsinco.malts.utility.Text;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -12,15 +13,7 @@ import java.util.stream.Stream;
 
 public class LogsCommand implements SubCommand {
 
-    private static final boolean DIALOGS_SUPPORTED = probeDialogSupport();
-    private static boolean probeDialogSupport() {
-        try {
-            Class.forName("io.papermc.paper.dialog.Dialog");
-            return true;
-        } catch (Throwable t) {
-            return false;
-        }
-    }
+    private static final boolean DIALOGS_SUPPORTED = ClassUtil.classExists("io.papermc.paper.dialog.Dialog");
 
     @Override
     public boolean execute(CommandSender sender, String label, List<String> args) {
