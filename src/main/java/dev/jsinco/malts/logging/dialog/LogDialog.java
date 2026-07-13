@@ -16,6 +16,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
 
@@ -51,7 +52,6 @@ public final class LogDialog {
     private static final NamedTextColor PUNCT_COLOR = NamedTextColor.DARK_GRAY;
     private static final NamedTextColor HIGHLIGHT_COLOR = NamedTextColor.YELLOW;
     private static final NamedTextColor KEY_COLOR = NamedTextColor.DARK_AQUA;
-    private static final NamedTextColor HEX_COLOR = NamedTextColor.DARK_PURPLE;
 
     private static final String UUID_REGEX =
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
@@ -273,7 +273,7 @@ public final class LogDialog {
 
     private static Component colorize(String raw, String highlight, boolean hasHighlight) {
         StringBuilder display = new StringBuilder(raw.length());
-        List<NamedTextColor> colors = new ArrayList<>(raw.length());
+        List<TextColor> colors = new ArrayList<>(raw.length());
         List<String> hovers = new ArrayList<>(raw.length());
 
         Matcher matcher = SEGMENTS.matcher(raw);
@@ -309,7 +309,7 @@ public final class LogDialog {
         int i = 0;
         while (i < length) {
             boolean hl = highlighted[i];
-            NamedTextColor color = colors.get(i);
+            TextColor color = colors.get(i);
             String hover = hovers.get(i);
             int j = i;
             while (j < length && highlighted[j] == hl && colors.get(j) == color && Objects.equals(hovers.get(j), hover)) {
@@ -328,8 +328,8 @@ public final class LogDialog {
         return result;
     }
 
-    private static void appendRun(StringBuilder display, List<NamedTextColor> colors, List<String> hovers,
-                                  String text, NamedTextColor color, String hover) {
+    private static void appendRun(StringBuilder display, List<TextColor> colors, List<String> hovers,
+                                  String text, TextColor color, String hover) {
         display.append(text);
         for (int i = 0; i < text.length(); i++) {
             colors.add(color);
@@ -337,7 +337,7 @@ public final class LogDialog {
         }
     }
 
-    private static NamedTextColor colorFor(Matcher matcher, String text) {
+    private static TextColor colorFor(Matcher matcher, String text) {
         if (matcher.group("time") != null) {
             return TIME_COLOR;
         }
@@ -357,7 +357,8 @@ public final class LogDialog {
             return KEY_COLOR;
         }
         if (matcher.group("hex") != null) {
-            return HEX_COLOR;
+            TextColor hex = TextColor.fromHexString(text);
+            return hex != null ? hex : DEFAULT_COLOR;
         }
         if (matcher.group("item") != null) {
             return ITEM_COLOR;

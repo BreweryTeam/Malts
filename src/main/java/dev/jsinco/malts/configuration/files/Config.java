@@ -260,7 +260,7 @@ public class Config extends OkaeriFile {
         );
 
         @Comment("How much detail should we record for items? [BASIC, DETAILED]")
-        private LogDetail detail = LogDetail.BASIC;
+        private LogDetail detail = LogDetail.DETAILED;
 
         @Comment("How deep to recurse into container items (shulker boxes and bundles)")
         private int containerContentDepth = 2;
