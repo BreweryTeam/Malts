@@ -55,10 +55,11 @@ public final class MaltsLogger {
 
     private static final String LOGS_DIR = "logs";
     private static final Pattern DATE_PREFIX = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})");
-
     public static final int MAX_QUERY_RESULTS = 5000;
 
     private static MaltsLogger instance;
+    private static final MaltsLogger NO_OP = new MaltsLogger(false);
+    private final boolean active;
 
     private final Path logsDir = DataSource.DATA_FOLDER.resolve(LOGS_DIR);
     private final ExecutorService writer = Executors.newSingleThreadExecutor();
@@ -74,10 +75,19 @@ public final class MaltsLogger {
     private long currentFileLines;
 
     private MaltsLogger() {
+        this(true);
+    }
+
+    private MaltsLogger(boolean active) {
+        this.active = active;
     }
 
     public static MaltsLogger get() {
         return instance;
+    }
+
+    public static MaltsLogger logger() {
+        return instance != null ? instance : NO_OP;
     }
 
     public static void init() {
@@ -99,7 +109,7 @@ public final class MaltsLogger {
     }
 
     public boolean enabled() {
-        return !shuttingDown && config().enabled();
+        return active && !shuttingDown && config().enabled();
     }
 
     private boolean actionEnabled(LogAction action) {

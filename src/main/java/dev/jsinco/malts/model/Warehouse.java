@@ -110,13 +110,11 @@ public class Warehouse implements CachedObject {
             compartmentCreated = true;
         }
 
-        MaltsLogger logger = MaltsLogger.get();
-        if (logger != null) {
-            if (compartmentCreated) {
-                logger.logWarehouseCompartment(LogAction.WAREHOUSE_ADD, actor, owner, material);
-            }
-            logger.logWarehouse(LogAction.WAREHOUSE_STOCK, actor, owner, material, amt);
+        MaltsLogger logger = MaltsLogger.logger();
+        if (compartmentCreated) {
+            logger.logWarehouseCompartment(LogAction.WAREHOUSE_ADD, actor, owner, material);
         }
+        logger.logWarehouse(LogAction.WAREHOUSE_STOCK, actor, owner, material, amt);
         return amt;
     }
 
@@ -153,10 +151,7 @@ public class Warehouse implements CachedObject {
 
         stock.decrease(finalAmt);
 
-        MaltsLogger logger = MaltsLogger.get();
-        if (logger != null) {
-            logger.logWarehouse(LogAction.WAREHOUSE_DESTOCK, actor, owner, material, finalAmt);
-        }
+        MaltsLogger.logger().logWarehouse(LogAction.WAREHOUSE_DESTOCK, actor, owner, material, finalAmt);
         return ItemStack.of(material, finalAmt);
     }
 
@@ -204,10 +199,7 @@ public class Warehouse implements CachedObject {
 
         if (event.callEvent()) {
             warehouseMap.remove(material);
-            MaltsLogger logger = MaltsLogger.get();
-            if (logger != null) {
-                logger.logWarehouseCompartment(LogAction.WAREHOUSE_REMOVE, actor, owner, material);
-            }
+            MaltsLogger.logger().logWarehouseCompartment(LogAction.WAREHOUSE_REMOVE, actor, owner, material);
             return TriState.TRUE;
         }
         return TriState.FALSE;

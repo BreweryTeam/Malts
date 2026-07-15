@@ -162,10 +162,7 @@ public class WarehouseCommand implements SubCommand {
                     WarehouseMode previousMode = maltsPlayer.getWarehouseMode();
                     LANG.entry(l -> l.warehouse().changedMode(), player, Couple.of("{mode}", Util.formatEnumerator(mode)));
                     maltsPlayer.setWarehouseMode(mode);
-                    MaltsLogger logger = MaltsLogger.get();
-                    if (logger != null) {
-                        logger.logWarehouseMode(player, maltsPlayer.getUuid(), previousMode, mode);
-                    }
+                    MaltsLogger.logger().logWarehouseMode(player, maltsPlayer.getUuid(), previousMode, mode);
                 } else {
                     // TODO: custom lang entry
                     LANG.entry(l -> l.command().base().noPermission(), player);

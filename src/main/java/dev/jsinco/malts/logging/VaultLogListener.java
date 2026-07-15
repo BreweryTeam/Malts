@@ -21,8 +21,7 @@ public class VaultLogListener implements Listener {
         if (!(event.getInventory().getHolder(false) instanceof Vault)) {
             return;
         }
-        MaltsLogger logger = MaltsLogger.get();
-        if (logger == null || !logger.enabled()) {
+        if (!MaltsLogger.logger().enabled()) {
             return;
         }
         openSnapshots.put(event.getPlayer().getUniqueId(), cloneContents(event.getInventory().getContents()));
@@ -36,9 +35,8 @@ public class VaultLogListener implements Listener {
         }
 
         ItemStack[] before = openSnapshots.remove(event.getPlayer().getUniqueId());
-        MaltsLogger logger = MaltsLogger.get();
-        if (before != null && logger != null) {
-            logger.logVaultChanges(event.getPlayer(), vault, before, event.getInventory().getContents());
+        if (before != null) {
+            MaltsLogger.logger().logVaultChanges(event.getPlayer(), vault, before, event.getInventory().getContents());
         }
     }
 
