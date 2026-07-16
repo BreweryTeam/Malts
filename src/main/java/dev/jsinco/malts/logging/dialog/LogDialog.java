@@ -33,6 +33,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+// TODO: Potentially make this translatable? Logs don't store any formatting info,
+//  so this would require much more intelligent parsing. A translation step could
+//  be implemented between interpreting the plain english logs and showing them
+//  in game. Alternatively, logs could of course be fully translated.
 public final class LogDialog {
 
     private static final int PAGE_SIZE = 10;
