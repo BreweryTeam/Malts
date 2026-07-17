@@ -13,6 +13,8 @@ public record LogFilter(
         @Nullable String text,
         @Nullable String notText,
         @Nullable String regex,
-        @Nullable String notRegex
+        @Nullable String notRegex,
+        @Nullable String actor,
+        @Nullable String owner
 ) {
 }

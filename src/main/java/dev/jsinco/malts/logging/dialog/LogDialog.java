@@ -95,7 +95,7 @@ public final class LogDialog {
 
     public static void open(Player player, MaltsLogger logger) {
         LocalDate today = LocalDate.now();
-        LogFilter filter = new LogFilter(today, today, null, null, "", "", "", "");
+        LogFilter filter = new LogFilter(today, today, null, null, "", "", "", "", "", "");
         applyFilter(player, logger, filter);
     }
 
@@ -407,6 +407,10 @@ public final class LogDialog {
                 .initial(orEmpty(filter.regex())).maxLength(256).width(300).build());
         inputs.add(DialogInput.text("not_regex", Component.text("Does not match regex"))
                 .initial(orEmpty(filter.notRegex())).maxLength(256).width(300).build());
+        inputs.add(DialogInput.text("actor", Component.text("Actor (exact name, UUID, or CONSOLE)"))
+                .initial(orEmpty(filter.actor())).maxLength(256).width(300).build());
+        inputs.add(DialogInput.text("owner", Component.text("Owner (exact name or UUID)"))
+                .initial(orEmpty(filter.owner())).maxLength(256).width(300).build());
         return inputs;
     }
 
@@ -449,7 +453,8 @@ public final class LogDialog {
         LocalTime timeTo = parseTime(response.getText("time_to"));
 
         return new LogFilter(from, to, timeFrom, timeTo,
-                current.text(), current.notText(), current.regex(), current.notRegex());
+                current.text(), current.notText(), current.regex(), current.notRegex(),
+                current.actor(), current.owner());
     }
 
     private static LogFilter readSearch(DialogResponseView response, LogFilter current) {
@@ -457,9 +462,11 @@ public final class LogDialog {
         String notText = trimToNull(response.getText("not_text"));
         String regex = trimToNull(response.getText("regex"));
         String notRegex = trimToNull(response.getText("not_regex"));
+        String actor = trimToNull(response.getText("actor"));
+        String owner = trimToNull(response.getText("owner"));
 
         return new LogFilter(current.from(), current.to(), current.timeFrom(), current.timeTo(),
-                text, notText, regex, notRegex);
+                text, notText, regex, notRegex, actor, owner);
     }
 
     private static LocalDate parseDate(String value) {

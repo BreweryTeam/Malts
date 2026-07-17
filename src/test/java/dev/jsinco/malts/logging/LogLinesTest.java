@@ -25,11 +25,15 @@ class LogLinesTest {
     }
 
     private static LogFilter search(String text, String notText, String regex, String notRegex) {
-        return new LogFilter(DATE, DATE, null, null, text, notText, regex, notRegex);
+        return new LogFilter(DATE, DATE, null, null, text, notText, regex, notRegex, null, null);
+    }
+
+    private static LogFilter actorOwner(String actor, String owner) {
+        return new LogFilter(DATE, DATE, null, null, null, null, null, null, actor, owner);
     }
 
     private static LogFilter timeWindow(LocalTime from, LocalTime to) {
-        return new LogFilter(DATE, DATE, from, to, null, null, null, null);
+        return new LogFilter(DATE, DATE, from, to, null, null, null, null, null, null);
     }
 
     @Test
@@ -74,6 +78,39 @@ class LogLinesTest {
         LogLines.Parsed line = rendered(LocalTime.NOON, LogAction.WAREHOUSE_STOCK, "Steve stocked 5x Diamond into warehouse");
         assertTrue(matches(line, search("diamond", "emerald", "\\[WH]", "\\[PV]")));
         assertFalse(matches(line, search("diamond", "warehouse", "\\[WH]", "\\[PV]")));
+    }
+
+    @Test
+    void actorFilterMatchesNameUuidAndConsole() {
+        LogLines.Parsed steve = rendered(LocalTime.NOON, LogAction.VAULT_EDIT_ICON,
+                "Steve (ec568111-1f7f-4446-90e5-095eac5cc9cb) changed icon of vault 1 from Anvil to Command Block");
+        assertTrue(matches(steve, actorOwner("steve", null)), "actor filter matches the actor name");
+        assertTrue(matches(steve, actorOwner("ec568111-1f7f-4446-90e5-095eac5cc9cb", null)),
+                "actor filter matches the actor UUID");
+        assertFalse(matches(steve, actorOwner("alex", null)), "actor filter excludes other actors");
+        assertFalse(matches(steve, actorOwner("stev", null)), "actor filter is exact, not a substring match");
+
+        LogLines.Parsed console = rendered(LocalTime.NOON, LogAction.VAULT_EDIT_ICON,
+                "CONSOLE changed icon of vault 1 from Anvil to Command Block "
+                        + "(owner=Mitalityyy (ec568111-1f7f-4446-90e5-095eac5cc9cb))");
+        assertTrue(matches(console, actorOwner("console", null)), "actor filter matches the CONSOLE actor");
+    }
+
+    @Test
+    void ownerFilterUsesOwnerSuffixAndFallsBackToActor() {
+        LogLines.Parsed withOwner = rendered(LocalTime.NOON, LogAction.VAULT_EDIT_ICON,
+                "CONSOLE changed icon of vault 1 from Anvil to Command Block "
+                        + "(owner=Mitalityyy (ec568111-1f7f-4446-90e5-095eac5cc9cb))");
+        assertTrue(matches(withOwner, actorOwner(null, "mitalityyy")), "owner filter matches the owner name");
+        assertTrue(matches(withOwner, actorOwner(null, "ec568111-1f7f-4446-90e5-095eac5cc9cb")),
+                "owner filter matches the owner UUID");
+        assertFalse(matches(withOwner, actorOwner(null, "console")),
+                "owner filter does not match the actor when a distinct owner is present");
+
+        LogLines.Parsed selfOwned = rendered(LocalTime.NOON, LogAction.VAULT_EDIT_NAME,
+                "Steve (ec568111-1f7f-4446-90e5-095eac5cc9cb) renamed vault 3 from \"a\" to \"b\"");
+        assertTrue(matches(selfOwned, actorOwner(null, "steve")),
+                "owner falls back to the actor when there is no (owner=...) suffix");
     }
 
     @Test

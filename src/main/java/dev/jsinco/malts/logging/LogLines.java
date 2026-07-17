@@ -10,6 +10,17 @@ final class LogLines {
 
     static final Pattern LINE_PATTERN = Pattern.compile("^\\[(\\d{2}:\\d{2}:\\d{2})]\\s+(?:\\[([A-Z_]+)]\\s+)?(.*)$");
 
+    private static final String UUID_REGEX =
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
+    private static final Pattern ACTOR_PATTERN = Pattern.compile(
+            "^(?:\\[\\d{2}:\\d{2}:\\d{2}]\\s+)?(?:\\[[A-Z_]+]\\s+)?"
+                    + "([A-Za-z0-9_]{1,16} \\(" + UUID_REGEX + "\\)|" + UUID_REGEX + "|\\S+)");
+
+    private static final Pattern OWNER_PATTERN = Pattern.compile("\\(owner=(.*)\\)$");
+
+    private static final Pattern REF_PATTERN = Pattern.compile("^(.*) \\((" + UUID_REGEX + ")\\)$");
+
     private LogLines() {
     }
 
@@ -38,7 +49,9 @@ final class LogLines {
                 pattern(filter.regex()),
                 pattern(filter.notRegex()),
                 lower(filter.text()),
-                lower(filter.notText()));
+                lower(filter.notText()),
+                lower(filter.actor()),
+                lower(filter.owner()));
     }
 
     static boolean matches(Parsed line, LogFilter filter, Compiled compiled) {
@@ -71,7 +84,35 @@ final class LogLines {
         if (compiled.notRegex() != null && compiled.notRegex().matcher(raw).find()) {
             return false;
         }
+
+        if (compiled.actorLower() != null || compiled.ownerLower() != null) {
+            String actor = actorOf(raw);
+            if (compiled.actorLower() != null && !refEquals(actor, compiled.actorLower())) {
+                return false;
+            }
+            if (compiled.ownerLower() != null && !refEquals(ownerOf(raw, actor), compiled.ownerLower())) {
+                return false;
+            }
+        }
         return true;
+    }
+
+    private static boolean refEquals(String ref, String filterLower) {
+        Matcher matcher = REF_PATTERN.matcher(ref);
+        String name = matcher.matches() ? matcher.group(1) : ref;
+        String uuid = matcher.matches() ? matcher.group(2) : ref;
+        return filterLower.equals(name.toLowerCase(Locale.ROOT))
+                || filterLower.equals(uuid.toLowerCase(Locale.ROOT));
+    }
+
+    private static String actorOf(String raw) {
+        Matcher matcher = ACTOR_PATTERN.matcher(raw);
+        return matcher.find() ? matcher.group(1) : "";
+    }
+
+    private static String ownerOf(String raw, String actor) {
+        Matcher matcher = OWNER_PATTERN.matcher(raw);
+        return matcher.find() ? matcher.group(1) : actor;
     }
 
     private static Pattern pattern(String value) {
@@ -85,6 +126,7 @@ final class LogLines {
     record Parsed(LocalDate date, LocalTime time, LogAction action, String raw) {
     }
 
-    record Compiled(Pattern regex, Pattern notRegex, String textLower, String notTextLower) {
+    record Compiled(Pattern regex, Pattern notRegex, String textLower, String notTextLower,
+                    String actorLower, String ownerLower) {
     }
 }
