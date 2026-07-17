@@ -13,6 +13,8 @@ import dev.jsinco.malts.events.PlayerListener;
 import dev.jsinco.malts.events.VaultListener;
 import dev.jsinco.malts.events.WarehouseListener;
 import dev.jsinco.malts.integration.Integration;
+import dev.jsinco.malts.logging.MaltsLogger;
+import dev.jsinco.malts.logging.VaultLogListener;
 import dev.jsinco.malts.model.MaltsInventory;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
@@ -44,6 +46,7 @@ public class Malts extends JavaPlugin {
         ConfigManager.createTranslationConfigs();
         // Needs to be here to prevent lazy init
         Registry<Integration> ignored = Registry.INTEGRATIONS;
+        MaltsLogger.init();
 
         getServer().getPluginCommand("malts").setExecutor(new MaltsBaseCommand());
         getServer().getPluginCommand("vaults").setExecutor(new VaultsBaseCommand());
@@ -54,6 +57,7 @@ public class Malts extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new PlayerListener(), this);
         getServer().getPluginManager().registerEvents(new VaultListener(), this);
+        getServer().getPluginManager().registerEvents(new VaultLogListener(), this);
         getServer().getPluginManager().registerEvents(new WarehouseListener(), this);
         getServer().getPluginManager().registerEvents(new GuiListener(), this);
         getServer().getPluginManager().registerEvents(new ChatPromptInputListener(), this);
@@ -62,6 +66,12 @@ public class Malts extends JavaPlugin {
     @Override
     public void onDisable() {
         shutdown = true;
+
+        MaltsLogger logger = MaltsLogger.get();
+        if (logger != null) {
+            logger.shutdown();
+        }
+
         DataSource dataSource = DataSource.getInstance();
 
         Registry.INTEGRATIONS.values().forEach(integration ->

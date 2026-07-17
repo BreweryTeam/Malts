@@ -6,6 +6,8 @@ import dev.jsinco.malts.enums.Driver;
 import dev.jsinco.malts.enums.EconomyProvider;
 import dev.jsinco.malts.enums.QuickReturnClickType;
 import dev.jsinco.malts.enums.WarehouseMode;
+import dev.jsinco.malts.logging.LogAction;
+import dev.jsinco.malts.logging.LogDetail;
 import dev.jsinco.malts.integration.Integration;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.registry.RegistryItem;
@@ -227,6 +229,73 @@ public class Config extends OkaeriFile {
                 "Or, by using '/malts max stock add <player> <amount>'.",
         })
         private int defaultMaxStock = 1000;
+    }
+
+    private Logging logging = new Logging();
+    @Getter
+    @Accessors(fluent = true)
+    public static class Logging extends OkaeriConfig {
+
+        @Comment("Should we log player vault and warehouse actions?")
+        private boolean enabled = false;
+
+        @Comment({
+                "Which actions should be logged? Remove any you don't care about.",
+                "* Warehouse: WAREHOUSE_ADD, WAREHOUSE_REMOVE, WAREHOUSE_STOCK, WAREHOUSE_DESTOCK, WAREHOUSE_MODE",
+                "* Vault: VAULT_DEPOSIT, VAULT_WITHDRAW, VAULT_EDIT_ICON, VAULT_EDIT_NAME, VAULT_EDIT_TRUST, VAULT_TRANSFER, VAULT_DELETE"
+        })
+        private List<LogAction> loggedActions = List.of(
+                LogAction.WAREHOUSE_ADD,
+                LogAction.WAREHOUSE_REMOVE,
+                LogAction.WAREHOUSE_STOCK,
+                LogAction.WAREHOUSE_DESTOCK,
+                LogAction.WAREHOUSE_MODE,
+                LogAction.VAULT_DEPOSIT,
+                LogAction.VAULT_WITHDRAW,
+                LogAction.VAULT_EDIT_ICON,
+                LogAction.VAULT_EDIT_NAME,
+                LogAction.VAULT_EDIT_TRUST,
+                LogAction.VAULT_TRANSFER,
+                LogAction.VAULT_DELETE
+        );
+
+        @Comment("How much detail should we record for items? [BASIC, DETAILED]")
+        private LogDetail detail = LogDetail.DETAILED;
+
+        @Comment("How deep to recurse into container items (shulker boxes and bundles)")
+        private int containerContentDepth = 2;
+
+        @Comment({
+                "Persistent data keys to log if present. Accepts 'namespace:key' and 'namespace:*'",
+                "Intended for identifying custom items. Only checks simple PDC types, not lists."
+        })
+        private List<String> loggedPersistentDataKeys = List.of();
+
+        @Comment("How often (in seconds) buffered log entries are written to disk.")
+        private long flushIntervalSeconds = 30;
+
+        @Comment("Flush the log buffer to disk once it holds this many entries.")
+        private int flushThreshold = 128;
+
+        @Comment("Should we compress the previous day's log file when a new day begins?")
+        private boolean compressOnRollover = true;
+
+        @Comment("After what file size should we start a fresh file? (Set to 0 to disable)")
+        private int maxFileSizeKb = 10240;
+
+        @Comment("After how many lines should we start a fresh file? (Set to 0 to disable)")
+        private int maxLines = 0;
+
+        @Comment("Auto-cleanup settings:")
+        private Purge purge = new Purge();
+        @Getter
+        @Accessors(fluent = true)
+        public static class Purge extends OkaeriConfig {
+            @Comment("Should old log files be automatically purged?")
+            private boolean enabled = true;
+            @Comment("After how many days should log files be removed?")
+            private int afterDays = 30;
+        }
     }
 
     private Economy economy = new Economy();

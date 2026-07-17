@@ -29,6 +29,7 @@ public class VaultListener implements Listener {
         if (!(holder instanceof Vault vault)) {
             return;
         }
+
         vault.update((Player) event.getPlayer());
         VaultKey key = vault.getKey();
 

@@ -47,6 +47,7 @@ permissions:
     children:
       malts.command.vaultadmin: true
       malts.command.warehouseadmin: true
+      malts.command.logs: true
       malts.bypass.openvault: true
   malts.default:
     description: A permission node for Malts intended for players.
@@ -78,6 +79,7 @@ permissions:
       malts.command.vaultname: true
       malts.command.search: true
       malts.command.editvault: true
+      malts.command.logs: true
   malts.bypass.*:
     children:
       malts.bypass.openvault: true

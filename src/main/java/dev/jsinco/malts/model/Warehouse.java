@@ -11,6 +11,8 @@ import dev.jsinco.malts.configuration.files.GuiConfig;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.enums.TriState;
 import dev.jsinco.malts.gui.item.GuiItem;
+import dev.jsinco.malts.logging.LogAction;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Text;
@@ -20,6 +22,7 @@ import lombok.Setter;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -72,6 +75,10 @@ public class Warehouse implements CachedObject {
      * @throws IllegalArgumentException if the provided material is not a valid item.
      */
     public int stockItem(Material material, int amt) {
+        return stockItem(null, material, amt);
+    }
+
+    public int stockItem(@Nullable CommandSender actor, Material material, int amt) {
         MaltsPlayer maltsPlayer = DataSource.getInstance().cachedObject(owner, MaltsPlayer.class);
         Preconditions.checkNotNull(maltsPlayer, "MaltsPlayer is null for owner: " + owner);
         int currentStockQuantity = currentStockQuantity();
@@ -91,6 +98,7 @@ public class Warehouse implements CachedObject {
 
 
         Stock stock = warehouseMap.get(material);
+        boolean compartmentCreated = false;
         if (stock != null) {
             stock.increase(amt);
         } else {
@@ -99,13 +107,24 @@ public class Warehouse implements CachedObject {
 
             material = compartmentEvent.getMaterial();
             warehouseMap.put(material, new Stock(material, amt));
+            compartmentCreated = true;
         }
 
+        MaltsLogger logger = MaltsLogger.logger();
+        if (compartmentCreated) {
+            logger.logWarehouseCompartment(LogAction.WAREHOUSE_ADD, actor, owner, material);
+        }
+        logger.logWarehouse(LogAction.WAREHOUSE_STOCK, actor, owner, material, amt);
         return amt;
     }
 
     @Nullable
     public ItemStack destockItem(Material material, int amt) {
+        return destockItem(null, material, amt);
+    }
+
+    @Nullable
+    public ItemStack destockItem(@Nullable CommandSender actor, Material material, int amt) {
         Stock stock = warehouseMap.get(material);
         if (stock == null) return null;
 
@@ -131,6 +150,8 @@ public class Warehouse implements CachedObject {
         }
 
         stock.decrease(finalAmt);
+
+        MaltsLogger.logger().logWarehouse(LogAction.WAREHOUSE_DESTOCK, actor, owner, material, finalAmt);
         return ItemStack.of(material, finalAmt);
     }
 
@@ -166,6 +187,10 @@ public class Warehouse implements CachedObject {
     }
 
     public TriState removeCompartment(Material material) {
+        return removeCompartment(null, material);
+    }
+
+    public TriState removeCompartment(@Nullable CommandSender actor, Material material) {
         Stock stock = warehouseMap.get(material);
         if (stock == null) return TriState.ALTERNATIVE_STATE;
 
@@ -174,6 +199,7 @@ public class Warehouse implements CachedObject {
 
         if (event.callEvent()) {
             warehouseMap.remove(material);
+            MaltsLogger.logger().logWarehouseCompartment(LogAction.WAREHOUSE_REMOVE, actor, owner, material);
             return TriState.TRUE;
         }
         return TriState.FALSE;
@@ -229,7 +255,7 @@ public class Warehouse implements CachedObject {
         }
 
         int toStock = Math.min(amt, materialInInv);
-        int stockedAmt = stockItem(material, toStock);
+        int stockedAmt = stockItem(player, material, toStock);
         if (stockedAmt > 0) {
             inv.removeItem(new ItemStack(material, stockedAmt));
             LANG.entry(l -> l.warehouse().addedItem(), player,
@@ -263,7 +289,7 @@ public class Warehouse implements CachedObject {
             return null;
         }
 
-        ItemStack itemStack = destockItem(material, toDestock);
+        ItemStack itemStack = destockItem(player, material, toDestock);
         if (itemStack != null) {
             inv.addItem(itemStack);
             LANG.entry(l -> l.warehouse().withdrewItem(), player,
@@ -313,7 +339,7 @@ public class Warehouse implements CachedObject {
                                     LANG.entry(l -> l.warehouse().inventoryFull(), player);
                                     return;
                                 }
-                                ItemStack item = destockItem(material, 1);
+                                ItemStack item = destockItem(player, material, 1);
                                 if (item == null) {
                                     LANG.entry(l -> l.warehouse().notEnoughMaterial(), player,
                                             Couple.of("{material}", Util.formatEnumerator(material.toString()))
@@ -328,7 +354,7 @@ public class Warehouse implements CachedObject {
                                     LANG.entry(l -> l.warehouse().inventoryFull(), player);
                                     return;
                                 }
-                                ItemStack item = destockItem(material, 64);
+                                ItemStack item = destockItem(player, material, 64);
                                 if (item == null) {
                                     LANG.entry(l -> l.warehouse().notEnoughMaterial(), player,
                                             Couple.of("{material}", Util.formatEnumerator(material.toString()))
@@ -344,7 +370,7 @@ public class Warehouse implements CachedObject {
                                     return;
                                 }
 
-                                ItemStack item = destockItem(material, invAmt);
+                                ItemStack item = destockItem(player, material, invAmt);
                                 if (item != null) {
                                     inv.addItem(item);
                                 } else {
@@ -362,7 +388,7 @@ public class Warehouse implements CachedObject {
                                     return;
                                 }
 
-                                int diff = stockItem(material, invAmt);
+                                int diff = stockItem(player, material, invAmt);
                                 if (diff > 0) {
                                     inv.removeItem(new ItemStack(material, diff));
                                 } else {

@@ -8,6 +8,7 @@ import dev.jsinco.malts.events.ChatPromptInputListener.ChatInputCallback;
 import dev.jsinco.malts.gui.item.GuiItem;
 import dev.jsinco.malts.gui.item.ItemConfirmation;
 import dev.jsinco.malts.gui.item.UncontainedGuiItem;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.storage.DataSource;
@@ -74,9 +75,11 @@ public class EditVaultGui extends MaltsGui {
                         Text.title("<red><b>Enter text", "Enter in chat"),
                         "Enter a new vault name in chat, type 'cancel' to cancel.",
                         input -> {
+                            String oldName = vault.getCustomName();
                             if (!vault.setCustomName(input)) return;
                             DataSource.getInstance().saveVault(vault);
 
+                            MaltsLogger.logger().logVaultName(player, vault, oldName, vault.getCustomName());
                             LANG.entry(l -> l.vaults().nameChanged(), player, Couple.of("{vaultName}", vault.getCustomName()));
                             Util.editMeta(clickedItem, meta -> {
                                 meta.lore(Text.mmlNoItalic(Util.replaceAll(CONFIG.editVaultGui().editNameButton().lore(), "{vaultName}", vault.getCustomName()), NamedTextColor.WHITE));
@@ -112,10 +115,12 @@ public class EditVaultGui extends MaltsGui {
                     itemConfirmation.setConfirmation(!currentValue);
                 } else if (currentValue && clickedInventory != event.getInventory()) {
                     Material newType = clickedItem.getType();
+                    Material oldIcon = vault.getIcon();
                     if (!vault.setIcon(newType)) return;
 
                     DataSource.getInstance().saveVault(vault);
 
+                    MaltsLogger.logger().logVaultIcon((Player) event.getWhoClicked(), vault, oldIcon, newType);
                     iconItem.setType(newType); // TODO: deprecated method
                     itemConfirmation.setConfirmation(false);
                     LANG.entry(l -> l.vaults().iconChanged(), event.getWhoClicked(), Couple.of("{material}", Util.formatEnumerator(newType)));
@@ -159,14 +164,17 @@ public class EditVaultGui extends MaltsGui {
                                 return;
                             }
 
+                            MaltsLogger logger = MaltsLogger.logger();
                             if (vault.isTrusted(offlinePlayer.getUniqueId())) {
                                 if (vault.removeTrusted(offlinePlayer.getUniqueId())) {
                                     LANG.entry(l -> l.vaults().playerUntrusted(), player, Couple.of("{name}", input));
+                                    logger.logVaultTrust(player, vault, offlinePlayer.getUniqueId(), false);
                                 } else {
                                     LANG.entry(l -> l.vaults().playerNotTrusted(), player, Couple.of("{name}", input));
                                 }
                             } else if (vault.addTrusted(offlinePlayer.getUniqueId())){
                                 LANG.entry(l -> l.vaults().playerTrusted(), player, Couple.of("{name}", input));
+                                logger.logVaultTrust(player, vault, offlinePlayer.getUniqueId(), true);
                             } else {
                                 LANG.entry(l -> l.vaults().trustListMaxed(), player, Couple.of("{trustedListSize}", trustListCap(vault.getOwner())));
                             }

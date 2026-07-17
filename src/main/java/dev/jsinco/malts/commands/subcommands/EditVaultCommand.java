@@ -5,6 +5,7 @@ import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Config;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.model.CachedObject;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Vault;
@@ -110,9 +111,11 @@ public class EditVaultCommand implements SubCommand {
             String newName = String.join(" ", args);
             int maxLength = ConfigManager.get(Config.class).vaults().maxNameCharacters();
 
+            String oldName = vault.getCustomName();
             if (vault.setCustomName(newName)) {
                 LANG.entry(l -> l.vaults().nameChanged(), sender, Couple.of("{vaultName}", newName));
                 dataSource.saveVault(vault);
+                MaltsLogger.logger().logVaultName(sender, vault, oldName, newName);
             } else {
                 LANG.entry(l -> l.vaults().vaultNameTooLong(), sender, Couple.of("{maxLength}", maxLength));
             }
@@ -124,10 +127,12 @@ public class EditVaultCommand implements SubCommand {
             Material material = Util.getEnum(args.getFirst(), Material.class);
             if (material == null || !material.isItem()) return false;
 
+            Material oldIcon = vault.getIcon();
             if (!vault.setIcon(material)) return false;
 
             dataSource.saveVault(vault);
             LANG.entry(l -> l.vaults().iconChanged(), sender, Couple.of("{material}", Util.formatEnumerator(material)));
+            MaltsLogger.logger().logVaultIcon(sender, vault, oldIcon, material);
             return true;
         }), (sender, vaultId) -> ICON_MATERIAL_NAMES),
         TRUST((dataSource, sender, vault, args) -> {
@@ -145,14 +150,17 @@ public class EditVaultCommand implements SubCommand {
                 return true;
             }
 
+            MaltsLogger logger = MaltsLogger.logger();
             if (vault.isTrusted(playerUUID)) {
                 if (vault.removeTrusted(playerUUID)) {
                     LANG.entry(l -> l.vaults().playerUntrusted(), sender, Couple.of("{name}", name));
+                    logger.logVaultTrust(sender, vault, playerUUID, false);
                 } else {
                     LANG.entry(l -> l.vaults().playerNotTrusted(), sender, Couple.of("{name}", name));
                 }
             } else if (vault.addTrusted(playerUUID)){
                 LANG.entry(l -> l.vaults().playerTrusted(), sender, Couple.of("{name}", name));
+                logger.logVaultTrust(sender, vault, playerUUID, true);
             } else {
                 LANG.entry(l -> l.vaults().trustListMaxed(), sender, Couple.of("{trustedListSize}", trustListCap));
             }

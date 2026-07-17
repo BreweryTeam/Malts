@@ -1,6 +1,7 @@
 package dev.jsinco.malts.commands.subcommands;
 
 import dev.jsinco.malts.commands.interfaces.SubCommand;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.registry.Registry;
@@ -95,6 +96,9 @@ public class VaultAdminCommand implements SubCommand {
             int vaultId = Util.getInteger(args.getFirst(), -1);
             if (vaultId < 0) return false;
             dataSource.deleteVault(offlinePlayer.getUniqueId(), vaultId).thenAccept(deleted -> {
+                if (deleted) {
+                    MaltsLogger.logger().logVaultDelete(sender, offlinePlayer.getUniqueId(), vaultId);
+                }
                 LANG.entry(l -> {
                     if (deleted) return l.vaults().vaultDeleted();
                     else return l.vaults().noVaultFound();
@@ -140,6 +144,8 @@ public class VaultAdminCommand implements SubCommand {
                 for (Vault vault : player2Vaults) {
                     dataSource.saveVault(vault.copy(offlinePlayer.getUniqueId())).join();
                 }
+                MaltsLogger.logger().logVaultTransfer(sender, offlinePlayer.getUniqueId(), player1Vaults.size(),
+                        otherPlayer.getUniqueId(), player2Vaults.size());
                 LANG.entry(
                         l -> l.vaults().transferred(),
                         sender,
@@ -230,18 +236,22 @@ public class VaultAdminCommand implements SubCommand {
         NAME((dataSource, sender, vault, args) -> {
             if (args.isEmpty()) return false;
             String newName = String.join(" ", args);
+            String oldName = vault.getCustomName();
             vault.forceSetCustomName(newName);
             LANG.entry(l -> l.vaults().nameChanged(), sender, Couple.of("{vaultName}", newName));
             dataSource.saveVault(vault);
+            MaltsLogger.logger().logVaultName(sender, vault, oldName, newName);
             return true;
         }, ownerUuid -> List.of()),
         ICON((dataSource, sender, vault, args) -> {
             if (args.isEmpty()) return false;
             Material material = Util.getEnum(args.getFirst(), Material.class);
             if (material == null || !material.isItem()) return false;
+            Material oldIcon = vault.getIcon();
             vault.forceSetIcon(material);
             dataSource.saveVault(vault);
             LANG.entry(l -> l.vaults().iconChanged(), sender, Couple.of("{material}", Util.formatEnumerator(material)));
+            MaltsLogger.logger().logVaultIcon(sender, vault, oldIcon, material);
             return true;
         }, ownerUuid -> ICON_MATERIAL_NAMES),
         TRUST((dataSource, sender, vault, args) -> {
@@ -253,14 +263,18 @@ public class VaultAdminCommand implements SubCommand {
                 LANG.entry(l -> l.vaults().playerNeverOnServer(), sender, Couple.of("{name}", name));
                 return true;
             }
+            boolean nowTrusted;
             if (vault.getTrustedPlayers().contains(targetUUID)) {
                 vault.getTrustedPlayers().remove(targetUUID);
                 LANG.entry(l -> l.vaults().playerUntrusted(), sender, Couple.of("{name}", name));
+                nowTrusted = false;
             } else {
                 vault.getTrustedPlayers().add(targetUUID);
                 LANG.entry(l -> l.vaults().playerTrusted(), sender, Couple.of("{name}", name));
+                nowTrusted = true;
             }
             dataSource.saveVault(vault);
+            MaltsLogger.logger().logVaultTrust(sender, vault, targetUUID, nowTrusted);
             return true;
         }, ownerUuid -> Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
 

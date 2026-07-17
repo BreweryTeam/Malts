@@ -11,6 +11,7 @@ import dev.jsinco.malts.enums.WarehouseMode;
 import dev.jsinco.malts.gui.item.GuiItem;
 import dev.jsinco.malts.gui.item.ItemConfirmation;
 import dev.jsinco.malts.gui.item.UncontainedGuiItem;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.storage.DataSource;
@@ -111,6 +112,7 @@ public class WarehouseGui extends MaltsGui {
                     if (nextMode == mode) return;
 
                     maltsPlayer.setWarehouseMode(nextMode);
+                    MaltsLogger.logger().logWarehouseMode(player, maltsPlayer.getUuid(), mode, nextMode);
                     event.getInventory().setItem(GUI_CONFIG.warehouseGui().managerButton().slot(), self.getItemStack(false));
                     LANG.entry(l -> l.warehouse().changedMode(), player, Couple.of("{mode}", Util.formatEnumerator(maltsPlayer.getWarehouseMode())));
                     return;
@@ -136,7 +138,7 @@ public class WarehouseGui extends MaltsGui {
                         if (!warehouse.canStock(material)) {
                             LANG.entry(l -> l.warehouse().blacklistedItem(), player, Couple.of("{material}", Util.formatEnumerator(material)));
                         } else if (!warehouse.hasCompartment(material)) {
-                            warehouse.stockItem(material, 0);
+                            warehouse.stockItem(player, material, 0);
                             refresh(player);
                         } else {
                             LANG.entry(l -> l.warehouse().compartmentAlreadyExists(), player,
@@ -147,7 +149,7 @@ public class WarehouseGui extends MaltsGui {
                         if (clickedInventory != event.getInventory()) {
                             break;
                         }
-                        TriState triState = warehouse.removeCompartment(material);
+                        TriState triState = warehouse.removeCompartment(player, material);
                         if (triState == TriState.TRUE) {
                             LANG.entry(l -> l.warehouse().removedCompartment(), player,
                                     Couple.of("{material}", Util.formatEnumerator(material))

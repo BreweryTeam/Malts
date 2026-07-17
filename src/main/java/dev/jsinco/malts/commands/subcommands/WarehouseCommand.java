@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.enums.WarehouseMode;
 import dev.jsinco.malts.gui.WarehouseGui;
+import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.storage.DataSource;
@@ -158,8 +159,10 @@ public class WarehouseCommand implements SubCommand {
                 }
 
                 if (mode.canUseMode(player)) {
+                    WarehouseMode previousMode = maltsPlayer.getWarehouseMode();
                     LANG.entry(l -> l.warehouse().changedMode(), player, Couple.of("{mode}", Util.formatEnumerator(mode)));
                     maltsPlayer.setWarehouseMode(mode);
+                    MaltsLogger.logger().logWarehouseMode(player, maltsPlayer.getUuid(), previousMode, mode);
                 } else {
                     // TODO: custom lang entry
                     LANG.entry(l -> l.command().base().noPermission(), player);
