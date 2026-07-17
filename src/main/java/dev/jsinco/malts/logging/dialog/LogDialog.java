@@ -56,6 +56,7 @@ public final class LogDialog {
     private static final NamedTextColor PUNCT_COLOR = NamedTextColor.DARK_GRAY;
     private static final NamedTextColor HIGHLIGHT_COLOR = NamedTextColor.YELLOW;
     private static final NamedTextColor KEY_COLOR = NamedTextColor.DARK_AQUA;
+    private static final NamedTextColor CONSOLE_COLOR = NamedTextColor.DARK_PURPLE;
 
     private static final String UUID_REGEX =
             "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
@@ -75,6 +76,7 @@ public final class LogDialog {
     private static final String SEGMENT_REGEX =
             "(?<time>\\[\\d{2}:\\d{2}:\\d{2}])"
                     + "|(?<action>\\[[A-Z_]+])"
+                    + "|(?<console>\\bCONSOLE\\b)"
                     + "|(?<quoted>\"[^\"]*\")"
                     + "|(?<key>[A-Za-z0-9_:]+(?==))"
                     + "|(?<hex>#[0-9a-fA-F]{6})"
@@ -82,7 +84,7 @@ public final class LogDialog {
                     + "|(?<keyword>" + KEYWORD_REGEX + ")"
                     + "|(?<nameuuid>(?<![-\\w])(?<pname>[A-Za-z0-9_]{1,16}) \\((?<puuid>" + UUID_REGEX + ")\\))"
                     + "|(?<uuid>\\(?" + UUID_REGEX + "\\)?)"
-                    + "|(?<punct>[=\\[\\]{}|])";
+                    + "|(?<punct>[=\\[\\](){}|])";
 
     private static final Pattern SEGMENTS = Pattern.compile(SEGMENT_REGEX);
 
@@ -353,6 +355,9 @@ public final class LogDialog {
                 return VAULT_COLOR;
             }
             return DEFAULT_COLOR;
+        }
+        if (matcher.group("console") != null) {
+            return CONSOLE_COLOR;
         }
         if (matcher.group("quoted") != null) {
             return QUOTED_COLOR;
