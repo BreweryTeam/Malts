@@ -56,6 +56,7 @@ public final class LogDialog {
     private static final NamedTextColor PUNCT_COLOR = NamedTextColor.DARK_GRAY;
     private static final NamedTextColor HIGHLIGHT_COLOR = NamedTextColor.YELLOW;
     private static final NamedTextColor KEY_COLOR = NamedTextColor.DARK_AQUA;
+    private static final NamedTextColor PDC_KEY_COLOR = NamedTextColor.BLUE;
     private static final NamedTextColor CONSOLE_COLOR = NamedTextColor.DARK_PURPLE;
 
     private static final String UUID_REGEX =
@@ -78,6 +79,7 @@ public final class LogDialog {
                     + "|(?<action>\\[[A-Z_]+])"
                     + "|(?<console>\\bCONSOLE\\b)"
                     + "|(?<quoted>\"[^\"]*\")"
+                    + "|(?<pdckey>[a-z0-9_.\\-]+:[a-z0-9_.\\-/]+(?==))"
                     + "|(?<key>[A-Za-z0-9_:]+(?==))"
                     + "|(?<hex>#[0-9a-fA-F]{6})"
                     + "|(?<item>\\d+x\\s+[A-Za-z0-9_' ]+?(?=\\s+(?:into|from)\\b|\\s*[{|\\]]))"
@@ -361,6 +363,9 @@ public final class LogDialog {
         }
         if (matcher.group("quoted") != null) {
             return QUOTED_COLOR;
+        }
+        if (matcher.group("pdckey") != null) {
+            return PDC_KEY_COLOR;
         }
         if (matcher.group("key") != null) {
             return KEY_COLOR;

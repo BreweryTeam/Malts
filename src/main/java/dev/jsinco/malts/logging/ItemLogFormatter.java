@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
@@ -290,31 +291,41 @@ public final class ItemLogFormatter {
             return;
         }
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        Map<String, String> entries = new LinkedHashMap<>();
         for (String raw : persistentDataKeys) {
             if (raw.endsWith(":*") || !raw.contains(":")) {
-                appendNamespace(pdc, custom, raw.endsWith(":*") ? raw.substring(0, raw.length() - 2) : raw);
+                collectNamespace(pdc, entries, raw.endsWith(":*") ? raw.substring(0, raw.length() - 2) : raw);
             } else {
-                appendExactKey(pdc, custom, raw);
+                collectExactKey(pdc, entries, raw);
             }
         }
-    }
-
-    private static void appendNamespace(PersistentDataContainer pdc, List<String> custom, String namespace) {
-        for (NamespacedKey present : pdc.getKeys()) {
-            if (present.getNamespace().equals(namespace)) {
-                custom.add(present.toString());
-            }
-        }
-    }
-
-    private static void appendExactKey(PersistentDataContainer pdc, List<String> custom, String raw) {
-        NamespacedKey key = NamespacedKey.fromString(raw);
-        if (key == null) {
+        if (entries.isEmpty()) {
             return;
         }
+        StringJoiner joiner = new StringJoiner(", ", "pdc={", "}");
+        entries.forEach((key, value) -> joiner.add(key + "=" + value));
+        custom.add(joiner.toString());
+    }
+
+    private static void collectNamespace(PersistentDataContainer pdc, Map<String, String> entries, String namespace) {
+        for (NamespacedKey present : pdc.getKeys()) {
+            if (present.getNamespace().equals(namespace)) {
+                collectKey(pdc, entries, present);
+            }
+        }
+    }
+
+    private static void collectExactKey(PersistentDataContainer pdc, Map<String, String> entries, String raw) {
+        NamespacedKey key = NamespacedKey.fromString(raw);
+        if (key != null) {
+            collectKey(pdc, entries, key);
+        }
+    }
+
+    private static void collectKey(PersistentDataContainer pdc, Map<String, String> entries, NamespacedKey key) {
         String value = readSimple(pdc, key);
         if (value != null) {
-            custom.add(raw + "=" + value);
+            entries.putIfAbsent(key.toString(), value);
         }
     }
 

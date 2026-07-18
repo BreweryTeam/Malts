@@ -30,6 +30,7 @@ import org.mockbukkit.mockbukkit.MockBukkit;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -106,7 +107,8 @@ class ItemLogFormatterTest {
         List<String> keys = List.of("lumaitems:itemid", "otherplugin:blob");
         String result = ItemLogFormatter.format(item, 1, LogDetail.BASIC, keys);
 
-        assertTrue(result.contains("lumaitems:itemid=magic_sword"), "should record the configured string PDC key");
+        assertTrue(result.contains("pdc={lumaitems:itemid=magic_sword}"),
+                "should record the configured string PDC key inside a pdc={...} group");
         assertFalse(result.contains("otherplugin:blob"), "must skip non-simple (blob) PDC values");
     }
 
@@ -121,8 +123,33 @@ class ItemLogFormatterTest {
         item.setItemMeta(meta);
 
         String result = ItemLogFormatter.format(item, 1, LogDetail.BASIC, List.of("lumaitems:*"));
-        assertTrue(result.contains("lumaitems:magic_sword"), "should record the id encoded in the key path");
+        assertTrue(result.contains("pdc={lumaitems:magic_sword="), "should record the id encoded in the key path and its value");
         assertFalse(result.contains("someplugin"), "must not record keys from other namespaces");
+    }
+
+    @Test
+    void groupsAllPersistentDataKeysIntoASinglePdcBlock() {
+        ItemStack item = new ItemStack(Material.DIAMOND, 1);
+        ItemMeta meta = item.getItemMeta();
+        meta.getPersistentDataContainer().set(
+                new NamespacedKey("lumaitems", "itemid"), PersistentDataType.STRING, "magic_sword");
+        meta.getPersistentDataContainer().set(
+                new NamespacedKey("lumaitems", "durability"), PersistentDataType.INTEGER, 12);
+        item.setItemMeta(meta);
+
+        String result = ItemLogFormatter.format(item, 1, LogDetail.BASIC, List.of("lumaitems:*", "lumaitems:itemid"));
+
+        assertEquals(1, countOccurrences(result, "pdc={"), "all PDC entries belong in one pdc={...} group");
+        assertEquals(1, countOccurrences(result, "lumaitems:itemid="), "a key matched twice must not be recorded twice");
+        assertTrue(result.contains("lumaitems:durability=12"), "should record the integer value");
+    }
+
+    private static int countOccurrences(String haystack, String needle) {
+        int count = 0;
+        for (int at = haystack.indexOf(needle); at >= 0; at = haystack.indexOf(needle, at + needle.length())) {
+            count++;
+        }
+        return count;
     }
 
     @Test
