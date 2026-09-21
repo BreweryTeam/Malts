@@ -296,10 +296,10 @@ public final class LogDialog {
         if (current == null) {
             sb.append("0 matches");
         } else {
-            sb.append(current.firstLine() + 1).append('-').append(current.lastLine() + 1).append(" of ").append(session.result.lines().size()).append(" matches");
+            sb.append(current.firstLine() + 1).append('-').append(current.lastLine() + 1).append(" of ").append(compact(session.result.lines().size())).append(" matches");
         }
         if (session.result.capped()) {
-            sb.append(" (capped at ").append(MaltsLogger.MAX_QUERY_RESULTS).append(')');
+            sb.append(" (capped at ").append(compact(MaltsLogger.MAX_QUERY_RESULTS)).append(')');
         }
         int pageCount = Math.max(1, session.pages.size());
         sb.append("  |  page ").append(page + 1).append('/').append(pageCount);
@@ -307,6 +307,15 @@ public final class LogDialog {
             sb.append("  |  ").append(current.date());
         }
         return sb.toString();
+    }
+
+    // 5000 -> "5k", 1250 -> "1.2k" (rounded down)
+    private static String compact(int count) {
+        if (count < 1000) {
+            return String.valueOf(count);
+        }
+        int tenths = count / 100;
+        return tenths % 10 == 0 ? (tenths / 10) + "k" : (tenths / 10) + "." + (tenths % 10) + "k";
     }
 
     private static List<Component> colorizedRows(String raw, String highlight, boolean hasHighlight) {
