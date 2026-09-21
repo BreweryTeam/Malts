@@ -13,6 +13,7 @@ import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -39,8 +40,9 @@ import java.util.regex.Pattern;
 //  in game. Alternatively, logs could of course be fully translated.
 public final class LogDialog {
 
-    private static final int PAGE_SIZE = 10;
+    private static final int PAGE_ROWS = 25;
     private static final int BODY_WIDTH = 400;
+    private static final int ROW_WIDTH = BODY_WIDTH - 24; // the text box's padding leaves less than BODY_WIDTH for text
     private static final int MAX_RANGE_DAYS = 366;
     private static final DateTimeFormatter DATE = DateTimeFormatter.ISO_LOCAL_DATE;
 
@@ -91,6 +93,7 @@ public final class LogDialog {
     private static final Pattern SEGMENTS = Pattern.compile(SEGMENT_REGEX);
 
     private static final Map<UUID, Session> SESSIONS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Object> PENDING = new ConcurrentHashMap<>();
 
     private LogDialog() {
     }
@@ -102,10 +105,19 @@ public final class LogDialog {
     }
 
     private static void applyFilter(Player player, MaltsLogger logger, LogFilter filter) {
-        logger.query(filter).thenAccept(result -> Executors.runSync(player, () -> {
-            SESSIONS.put(player.getUniqueId(), new Session(logger, filter, result));
-            show(player);
-        }));
+        Object request = new Object();
+        PENDING.put(player.getUniqueId(), request);
+        Executors.runSync(player, () -> player.showDialog(buildLoading()));
+
+        logger.query(filter)
+                .thenApply(result -> new Session(logger, filter, result)) // colorize and paginate off the main thread
+                .thenAccept(session -> Executors.runSync(player, () -> {
+                    if (!PENDING.remove(player.getUniqueId(), request)) {
+                        return; // closed while loading, or superseded by a newer query
+                    }
+                    SESSIONS.put(player.getUniqueId(), session);
+                    show(player);
+                }));
     }
 
     private static void showPage(Player player, int page) {
@@ -115,7 +127,7 @@ public final class LogDialog {
             return;
         }
         int maxPage = Math.max(0, session.pages.size() - 1);
-        session.page = Math.min(Math.max(0, page), maxPage);
+        session.page = Math.clamp(page, 0, maxPage);
         show(player);
     }
 
@@ -131,7 +143,8 @@ public final class LogDialog {
     private static Dialog build(Session session) {
         DialogBase base = DialogBase.builder(Component.text("Malts Logs", NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
-                .afterAction(DialogBase.DialogAfterAction.WAIT_FOR_RESPONSE)
+                .pause(false) // required for after_action NONE
+                .afterAction(DialogBase.DialogAfterAction.NONE)
                 .body(buildBody(session))
                 .build();
 
@@ -153,7 +166,8 @@ public final class LogDialog {
     private static Dialog buildDateTime(Session session) {
         DialogBase base = DialogBase.builder(Component.text("Malts Logs: Date & Time", NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
-                .afterAction(DialogBase.DialogAfterAction.WAIT_FOR_RESPONSE)
+                .pause(false) // required for after_action NONE
+                .afterAction(DialogBase.DialogAfterAction.NONE)
                 .body(List.of(DialogBody.plainMessage(
                         Component.text("Date and time range. Blank To date = same as From; blank times = ignore.",
                                 NamedTextColor.GRAY), BODY_WIDTH)))
@@ -174,7 +188,8 @@ public final class LogDialog {
     private static Dialog buildSearch(Session session) {
         DialogBase base = DialogBase.builder(Component.text("Malts Logs: Search", NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
-                .afterAction(DialogBase.DialogAfterAction.WAIT_FOR_RESPONSE)
+                .pause(false) // required for after_action NONE
+                .afterAction(DialogBase.DialogAfterAction.NONE)
                 .body(List.of(DialogBody.plainMessage(
                         Component.text("Filter lines by text and regex patterns. Blank = ignore.",
                                 NamedTextColor.GRAY), BODY_WIDTH)))
@@ -192,8 +207,24 @@ public final class LogDialog {
         return Dialog.create(factory -> factory.empty().base(base).type(type));
     }
 
+    private static Dialog buildLoading() {
+        DialogBase base = DialogBase.builder(Component.text("Malts Logs", NamedTextColor.GOLD))
+                .canCloseWithEscape(true)
+                .pause(false) // required for after_action NONE
+                .afterAction(DialogBase.DialogAfterAction.NONE)
+                .body(List.of(
+                        DialogBody.plainMessage(Component.text("Searching logs...", NamedTextColor.YELLOW), BODY_WIDTH),
+                        DialogBody.plainMessage(padRows(List.of(
+                                Component.text("This may take a moment for large date ranges.", NamedTextColor.GRAY))), BODY_WIDTH)))
+                .build();
+
+        DialogType type = DialogType.notice(closeButton());
+        return Dialog.create(factory -> factory.empty().base(base).type(type));
+    }
+
     private static ActionButton closeButton() {
         return button("Close", "Close this window", (response, player) -> {
+            PENDING.remove(player.getUniqueId());
             SESSIONS.remove(player.getUniqueId());
             player.closeDialog();
         });
@@ -237,37 +268,27 @@ public final class LogDialog {
         }
 
         List<Page> pages = session.pages;
-        int total = session.result.lines().size();
 
         if (pages.isEmpty()) {
             body.add(DialogBody.plainMessage(Component.text(headerText(session, null, 0), NamedTextColor.YELLOW), BODY_WIDTH));
-            Component empty = Component.text("No matching log entries.", NamedTextColor.GRAY);
-            for (int i = 0; i < PAGE_SIZE * 2; i++) {
-                empty = empty.append(Component.newline());
-            }
-            body.add(DialogBody.plainMessage(empty, BODY_WIDTH));
+            body.add(DialogBody.plainMessage(padRows(List.of(
+                    Component.text("No matching log entries.", NamedTextColor.GRAY))), BODY_WIDTH));
             return body;
         }
 
         int page = Math.min(session.page, pages.size() - 1);
         Page current = pages.get(page);
         body.add(DialogBody.plainMessage(Component.text(headerText(session, current, page), NamedTextColor.YELLOW), BODY_WIDTH));
-
-        String highlight = session.filter.text();
-        boolean hasHighlight = highlight != null && !highlight.isBlank();
-        Component lines = Component.empty();
-        for (int i = 0; i < current.texts().size(); i++) {
-            if (i > 0) {
-                lines = lines.append(Component.newline());
-            }
-            lines = lines.append(colorize(current.texts().get(i), highlight, hasHighlight));
-        }
-        int missing = PAGE_SIZE - current.texts().size();
-        for (int i = 0; i < missing * 2; i++) { // TODO: replace *2 with something that takes the length of the shown rows into account
-            lines = lines.append(Component.newline());
-        }
-        body.add(DialogBody.plainMessage(lines, BODY_WIDTH));
+        body.add(DialogBody.plainMessage(padRows(current.rows()), BODY_WIDTH));
         return body;
+    }
+
+    private static Component padRows(List<Component> rows) {
+        Component joined = Component.join(JoinConfiguration.newlines(), rows);
+        for (int i = rows.size(); i < PAGE_ROWS; i++) {
+            joined = joined.append(Component.newline());
+        }
+        return joined;
     }
 
     private static String headerText(Session session, Page current, int page) {
@@ -275,9 +296,7 @@ public final class LogDialog {
         if (current == null) {
             sb.append("0 matches");
         } else {
-            int start = current.globalStart();
-            int end = start + current.texts().size();
-            sb.append(start + 1).append('-').append(end).append(" of ").append(session.result.lines().size()).append(" matches");
+            sb.append(current.firstLine() + 1).append('-').append(current.lastLine() + 1).append(" of ").append(session.result.lines().size()).append(" matches");
         }
         if (session.result.capped()) {
             sb.append(" (capped at ").append(MaltsLogger.MAX_QUERY_RESULTS).append(')');
@@ -290,7 +309,7 @@ public final class LogDialog {
         return sb.toString();
     }
 
-    private static Component colorize(String raw, String highlight, boolean hasHighlight) {
+    private static List<Component> colorizedRows(String raw, String highlight, boolean hasHighlight) {
         StringBuilder display = new StringBuilder(raw.length());
         List<TextColor> colors = new ArrayList<>(raw.length());
         List<String> hovers = new ArrayList<>(raw.length());
@@ -324,14 +343,23 @@ public final class LogDialog {
             }
         }
 
+        List<Component> rows = new ArrayList<>();
+        for (int[] row : wrapRows(display, highlighted)) {
+            rows.add(render(display, colors, hovers, highlighted, row[0], row[1]));
+        }
+        return rows;
+    }
+
+    private static Component render(StringBuilder display, List<TextColor> colors, List<String> hovers,
+                                    boolean[] highlighted, int from, int to) {
         Component result = Component.empty();
-        int i = 0;
-        while (i < length) {
+        int i = from;
+        while (i < to) {
             boolean hl = highlighted[i];
             TextColor color = colors.get(i);
             String hover = hovers.get(i);
             int j = i;
-            while (j < length && highlighted[j] == hl && colors.get(j) == color && Objects.equals(hovers.get(j), hover)) {
+            while (j < to && highlighted[j] == hl && colors.get(j) == color && Objects.equals(hovers.get(j), hover)) {
                 j++;
             }
             Component piece = Component.text(display.substring(i, j), hl ? HIGHLIGHT_COLOR : color);
@@ -345,6 +373,54 @@ public final class LogDialog {
             i = j;
         }
         return result;
+    }
+
+    private static List<int[]> wrapRows(CharSequence text, boolean[] bold) {
+        List<int[]> rows = new ArrayList<>();
+        int start = 0;
+        while (start < text.length()) {
+            int width = 0;
+            int lastSpace = -1;
+            int end = start;
+            while (end < text.length()) {
+                char c = text.charAt(end);
+                if (c == ' ') {
+                    lastSpace = end;
+                }
+                int charWidth = charWidth(c) + (bold[end] ? 1 : 0);
+                if (end > start && width + charWidth > ROW_WIDTH) {
+                    break;
+                }
+                width += charWidth;
+                end++;
+            }
+            if (end == text.length()) {
+                rows.add(new int[]{start, end});
+                break;
+            }
+            if (lastSpace != -1) {
+                rows.add(new int[]{start, lastSpace});
+                start = lastSpace + 1;
+            } else {
+                rows.add(new int[]{start, end});
+                start = end;
+            }
+        }
+        if (rows.isEmpty()) {
+            rows.add(new int[]{0, 0});
+        }
+        return rows;
+    }
+
+    private static int charWidth(char c) {
+        return switch (c) {
+            case '!', '\'', ',', '.', ':', ';', 'i', '|' -> 2;
+            case '`', 'l' -> 3;
+            case ' ', '"', '(', ')', '*', 'I', '[', ']', 't', '{', '}' -> 4;
+            case '<', '>', 'f', 'k' -> 5;
+            case '@', '~' -> 7;
+            default -> c < 0x250 ? 6 : 9;
+        };
     }
 
     private static void appendRun(StringBuilder display, List<TextColor> colors, List<String> hovers,
@@ -526,28 +602,39 @@ public final class LogDialog {
         void handle(DialogResponseView response, Player player);
     }
 
-    private record Page(LocalDate date, int globalStart, List<String> texts) {
+    private record Page(LocalDate date, int firstLine, int lastLine, List<Component> rows) {
     }
 
-    private static List<Page> buildPages(LogQueryResult result) {
+    private static List<Page> buildPages(LogQueryResult result, LogFilter filter) {
+        String highlight = filter.text();
+        boolean hasHighlight = highlight != null && !highlight.isBlank();
+
         List<Page> pages = new ArrayList<>();
         List<LogQueryResult.Line> lines = result.lines();
-        int i = 0;
-        while (i < lines.size()) {
-            LocalDate date = lines.get(i).date();
-            int dayEnd = i;
-            while (dayEnd < lines.size() && lines.get(dayEnd).date().equals(date)) {
-                dayEnd++;
+        LocalDate date = null;
+        int firstLine = 0;
+        List<Component> rows = new ArrayList<>();
+        for (int i = 0; i < lines.size(); i++) {
+            LogQueryResult.Line line = lines.get(i);
+            if (!rows.isEmpty() && !line.date().equals(date)) {
+                pages.add(new Page(date, firstLine, i - 1, rows));
+                rows = new ArrayList<>();
             }
-            for (int chunk = i; chunk < dayEnd; chunk += PAGE_SIZE) {
-                int end = Math.min(chunk + PAGE_SIZE, dayEnd);
-                List<String> texts = new ArrayList<>();
-                for (int j = chunk; j < end; j++) {
-                    texts.add(lines.get(j).text());
+            if (rows.isEmpty()) {
+                date = line.date();
+                firstLine = i;
+            }
+            for (Component row : colorizedRows(line.text(), highlight, hasHighlight)) {
+                if (rows.size() == PAGE_ROWS) {
+                    pages.add(new Page(date, firstLine, i, rows));
+                    rows = new ArrayList<>();
+                    firstLine = i;
                 }
-                pages.add(new Page(date, chunk, texts));
+                rows.add(row);
             }
-            i = dayEnd;
+        }
+        if (!rows.isEmpty()) {
+            pages.add(new Page(date, firstLine, lines.size() - 1, rows));
         }
         return pages;
     }
@@ -563,7 +650,7 @@ public final class LogDialog {
             this.logger = logger;
             this.filter = filter;
             this.result = result;
-            this.pages = buildPages(result);
+            this.pages = buildPages(result, filter);
         }
     }
 }
