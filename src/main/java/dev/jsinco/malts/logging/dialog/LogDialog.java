@@ -111,6 +111,7 @@ public final class LogDialog {
     private static void showPage(Player player, int page) {
         Session session = SESSIONS.get(player.getUniqueId());
         if (session == null) {
+            player.closeDialog();
             return;
         }
         int maxPage = Math.max(0, session.pages.size() - 1);
@@ -121,6 +122,7 @@ public final class LogDialog {
     private static void show(Player player) {
         Session session = SESSIONS.get(player.getUniqueId());
         if (session == null) {
+            player.closeDialog();
             return;
         }
         player.showDialog(build(session));
@@ -129,6 +131,7 @@ public final class LogDialog {
     private static Dialog build(Session session) {
         DialogBase base = DialogBase.builder(Component.text("Malts Logs", NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
+                .afterAction(DialogBase.DialogAfterAction.WAIT_FOR_RESPONSE)
                 .body(buildBody(session))
                 .build();
 
@@ -136,7 +139,7 @@ public final class LogDialog {
                 button("Search", "Filter by text and regular expressions", (response, player) -> openSearch(player)),
                 button("Date & Time", "Filter by date and time range", (response, player) -> openDateTime(player)),
                 button("Flush", "Write buffered entries to disk, then re-query",
-                        (response, player) -> session.logger.flushAsync().thenRun(() -> reQuery(player))),
+                        (response, player) -> session.logger.flushAsync().whenComplete((ignored, error) -> reQuery(player))),
                 button("< Prev", "Previous page", (response, player) -> showPage(player, session.page - 1)),
                 button("Refresh", "Re-run the current filters to include newly logged entries",
                         (response, player) -> reQuery(player)),
@@ -150,6 +153,7 @@ public final class LogDialog {
     private static Dialog buildDateTime(Session session) {
         DialogBase base = DialogBase.builder(Component.text("Malts Logs: Date & Time", NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
+                .afterAction(DialogBase.DialogAfterAction.WAIT_FOR_RESPONSE)
                 .body(List.of(DialogBody.plainMessage(
                         Component.text("Date and time range. Blank To date = same as From; blank times = ignore.",
                                 NamedTextColor.GRAY), BODY_WIDTH)))
@@ -170,6 +174,7 @@ public final class LogDialog {
     private static Dialog buildSearch(Session session) {
         DialogBase base = DialogBase.builder(Component.text("Malts Logs: Search", NamedTextColor.GOLD))
                 .canCloseWithEscape(true)
+                .afterAction(DialogBase.DialogAfterAction.WAIT_FOR_RESPONSE)
                 .body(List.of(DialogBody.plainMessage(
                         Component.text("Filter lines by text and regex patterns. Blank = ignore.",
                                 NamedTextColor.GRAY), BODY_WIDTH)))
@@ -198,6 +203,8 @@ public final class LogDialog {
         Session session = SESSIONS.get(player.getUniqueId());
         if (session != null) {
             player.showDialog(buildDateTime(session));
+        } else {
+            player.closeDialog();
         }
     }
 
@@ -205,6 +212,8 @@ public final class LogDialog {
         Session session = SESSIONS.get(player.getUniqueId());
         if (session != null) {
             player.showDialog(buildSearch(session));
+        } else {
+            player.closeDialog();
         }
     }
 
@@ -212,6 +221,8 @@ public final class LogDialog {
         Session session = SESSIONS.get(player.getUniqueId());
         if (session != null) {
             applyFilter(player, session.logger, session.filter);
+        } else {
+            Executors.runSync(player, player::closeDialog);
         }
     }
 
