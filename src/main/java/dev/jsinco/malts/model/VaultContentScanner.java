@@ -4,17 +4,23 @@ import com.google.common.base.Preconditions;
 import dev.jsinco.malts.commands.subcommands.SearchCommand;
 import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.IntPair;
+import dev.jsinco.malts.configuration.files.GuiConfig;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Text;
 import dev.jsinco.malts.utility.Util;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.BundleContents;
+import io.papermc.paper.datacomponent.item.ItemContainerContents;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * Scans a collection of vaults for a given item(s) based
@@ -35,6 +40,9 @@ import java.util.stream.Collectors;
 public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair range, @Nullable String who) {
 
     private static final IntPair RANGE_PER_PAGE = IntPair.of(1, 6);
+    private static final int MAX_CONTAINER_DEPTH = 8; // Bundles can be nested inside each other
+    private static final int MAX_CONTAINER_SLOTS = 256; // Vanilla limit of the container data component
+    private static final GuiConfig GUI_CONFIG = ConfigManager.get(GuiConfig.class);
 
     public VaultContentScanner(Collection<Vault> vaults, int page, @Nullable String who) {
         this(vaults, rangeForPage(page), who);
@@ -45,10 +53,8 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
         String searchFor = plainText.toLowerCase().strip();
         List<Result> results = vaults.stream()
                 .map(vault -> {
-                    List<ItemStack> matches = Arrays.stream(vault.getInventory().getContents())
-                            .filter(Objects::nonNull)
-                            .filter(item -> matchesSearch(item, searchFor))
-                            .collect(Collectors.toList());
+                    List<Match> matches = new ArrayList<>();
+                    matches(Arrays.asList(vault.getInventory().getContents()), searchFor, List.of(), matches);
 
                     if (matches.isEmpty()) return null;
 
@@ -59,6 +65,37 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
         return new ResultCollection(results, range, plainText, who);
     }
 
+
+    private void matches(List<ItemStack> items, String searchFor, List<ItemStack> containers, List<Match> matches) {
+        for (ItemStack item : items) {
+            if (item == null || item.isEmpty()) continue;
+
+            if (matchesSearch(item, searchFor)) {
+                matches.add(new Match(item, containers));
+            }
+            if (containers.size() < MAX_CONTAINER_DEPTH) {
+                List<ItemStack> contents = contents(item);
+                if (contents.isEmpty()) continue;
+
+                List<ItemStack> nestedContainers = new ArrayList<>(containers);
+                nestedContainers.add(item);
+                matches(contents, searchFor, List.copyOf(nestedContainers), matches);
+            }
+        }
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private List<ItemStack> contents(ItemStack itemStack) {
+        ItemContainerContents container = itemStack.getData(DataComponentTypes.CONTAINER);
+        if (container != null) {
+            return container.contents();
+        }
+        BundleContents bundle = itemStack.getData(DataComponentTypes.BUNDLE_CONTENTS);
+        if (bundle != null) {
+            return bundle.contents();
+        }
+        return List.of();
+    }
 
     private boolean matchesSearch(ItemStack itemStack, String searchFor) {
         return hasMatchingName(itemStack, searchFor)
@@ -164,9 +201,11 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
 
         public List<Component> resultsFormatted() {
             String format = lang.command().search().resultFormat();
+            String nestedFormat = lang.command().search().nestedResultFormat();
+            Component containerSeparator = Text.mm(lang.command().search().containerSeparator());
             List<Component> resultsFormatted = new ArrayList<>();
             for (Result result : this.results) {
-                List<Component> formattedItems = result.formatMatchingItems(format, result.getVault());
+                List<Component> formattedItems = result.formatMatchingItems(format, nestedFormat, containerSeparator, result.getVault());
                 resultsFormatted.addAll(formattedItems);
             }
 
@@ -199,28 +238,54 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
         }
     }
 
+    // Outermost first, empty if the item is directly in the vault
+    public record Match(ItemStack item, List<ItemStack> containers) {
+    }
+
     @AllArgsConstructor
     public static class Result {
 
         @Getter
         private final Vault vault;
         @Getter
-        private final List<ItemStack> matchingItems;
+        private final List<Match> matchingItems;
         private final @Nullable String otherPlayer;
 
-        public List<Component> formatMatchingItems(String format, Vault vault) {
+        public List<Component> formatMatchingItems(String format, String nestedFormat, Component containerSeparator, Vault vault) {
+            Component vaultName = Text.mm(vault.getCustomName()).hoverEvent(vaultPreview(vault).asHoverEvent());
             return matchingItems.stream()
-                    .map(itemStack ->
-                            Util.replaceComponents(
-                                            Text.mm(format),
-                                            Couple.of("{itemName}", itemStack.effectiveName()),
-                                            Couple.of("{amount}", String.valueOf(itemStack.getAmount())),
-                                            Couple.of("{vaultName}", vault.getCustomName())
-                                    )
-                                    .hoverEvent(itemStack.asHoverEvent())
-                                    .clickEvent(ClickEvent.runCommand(this.vaultCommand()))
-                    )
+                    .map(match -> {
+                        ItemStack itemStack = match.item();
+                        Component containers = Component.join(
+                                JoinConfiguration.separator(containerSeparator),
+                                match.containers().stream()
+                                        .map(container -> container.effectiveName().hoverEvent(container.asHoverEvent()))
+                                        .toList()
+                        );
+                        return Util.replaceComponents(
+                                        Text.mm(match.containers().isEmpty() ? format : nestedFormat),
+                                        Couple.of("{itemName}", itemStack.effectiveName().hoverEvent(itemStack.asHoverEvent())),
+                                        Couple.of("{amount}", String.valueOf(itemStack.getAmount())),
+                                        Couple.of("{vaultName}", vaultName),
+                                        Couple.of("{containers}", containers)
+                                )
+                                .clickEvent(ClickEvent.runCommand(this.vaultCommand()));
+                    })
                     .toList();
+        }
+
+        // A chest item named after the vault holding its contents (for container preview mods)
+        @SuppressWarnings("UnstableApiUsage")
+        private static ItemStack vaultPreview(Vault vault) {
+            List<ItemStack> contents = Arrays.stream(vault.getInventory().getContents())
+                    .limit(MAX_CONTAINER_SLOTS)
+                    .map(item -> item == null ? ItemStack.empty() : item)
+                    .toList();
+            ItemStack preview = ItemStack.of(Material.CHEST);
+            preview.setData(DataComponentTypes.CUSTOM_NAME, Text.mm("<!i>" + GUI_CONFIG
+                    .yourVaultsGui().vaultItem().name().replace("{vaultName}", vault.getCustomName())));
+            preview.setData(DataComponentTypes.CONTAINER, ItemContainerContents.containerContents(contents));
+            return preview;
         }
 
         private String vaultCommand() {

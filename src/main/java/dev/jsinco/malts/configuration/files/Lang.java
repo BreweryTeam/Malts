@@ -151,6 +151,8 @@ public class Lang extends OkaeriFile {
         public static class Search extends OkaeriConfig {
             private String noResults;
             private String resultFormat;
+            private String nestedResultFormat;
+            private String containerSeparator;
             private String results;
             private String previousPage;
             private String nextPage;

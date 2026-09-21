@@ -100,6 +100,8 @@ command:
     noAccessibleVaults: You do not have access to any vaults for {name}. Have they trusted you to any of them?
     noResults: Couldn't find any items matching '<aqua><b>{query}</b></aqua>'. Try searching by <yellow>name, lore, or material</yellow>.
     resultFormat: '<#7b75aa>• {itemName} x{amount} in <b><aqua>{vaultName}</aqua></b>'
+    nestedResultFormat: '<#7b75aa>• {itemName} x{amount} in <b><aqua>{vaultName}</aqua></b> <gray>(in {containers})</gray>'
+    containerSeparator: ' <dark_gray>»</dark_gray> '
     results: |-
       <gray>Found {amount} itemstacks matching '<aqua><b>{query}</b></aqua>'.</gray>
       <gold>---- <aqua><b>Search Results</b></aqua> ----</gold>

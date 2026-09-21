@@ -100,6 +100,8 @@ command:
     noAccessibleVaults: 你不拥有或可以打开名为 {name} 的保险箱。保险箱拥有者是否给你开放了权限？
     noResults: 找不到任何匹配结果 '<aqua><b>{query}</b></aqua>' 的物品。试着搜索 <yellow>名称、描述或物品材质</yellow> 的关键词。
     resultFormat: '<#7b75aa>•<b><aqua>{vaultName}</aqua></b> 存有的 {amount}x {itemName}'
+    nestedResultFormat: '<#7b75aa>•<b><aqua>{vaultName}</aqua></b> 存有的 {amount}x {itemName} <gray>（位于 {containers}）</gray>'
+    containerSeparator: ' <dark_gray>»</dark_gray> '
     results: |-
       <gray>找到了 {amount} 个符合'<aqua><b>{query}</b></aqua>' 的物品。</gray>
       <gold>---- <aqua><b>搜索结果</b></aqua> ----</gold>
