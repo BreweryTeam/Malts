@@ -105,6 +105,12 @@ public abstract class DataSource {
         double accessFee = economy.vaults().accessFee();
         UUID owner = player.getUniqueId();
 
+        // Don't read while a save is happening
+        if (isLocked(VaultKey.of(owner, id))) {
+            lang.entry(l -> l.vaults().databaseBusy(), player);
+            return;
+        }
+
         getVault(owner, id, false).thenAccept(vault -> {
             if (vault == null) { // Check if vault exists
                 // Check if we're using economy and if there's a creation fee

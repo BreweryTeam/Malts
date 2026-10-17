@@ -144,6 +144,16 @@ public class Vault implements MaltsInventory {
             }
 
             Executors.runSync(player, () -> {
+                // Re-check on the player's thread, the async canOpen check may be stale by now.
+                // Opening a fresh copy over one already being viewed would expose unsaved (stale) contents.
+                if (this.equals(player.getOpenInventory().getTopInventory().getHolder(false))) {
+                    LANG.entry(l -> l.vaults().alreadyOpen(), player);
+                    return;
+                }
+                if (DataSource.getInstance().isLocked(this.key)) {
+                    LANG.entry(l -> l.vaults().databaseBusy(), player);
+                    return;
+                }
                 player.openInventory(this.inventory);
             });
 

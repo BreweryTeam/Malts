@@ -19,13 +19,19 @@ import dev.jsinco.malts.model.MaltsInventory;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.ExceptionUtil;
+import io.papermc.paper.ServerBuildInfo;
 import lombok.Getter;
 import lombok.Setter;
+import net.kyori.adventure.key.Key;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.function.Consumer;
+
 public class Malts extends JavaPlugin {
+
+    private static final boolean FOLIA = ServerBuildInfo.buildInfo().isBrandCompatible(Key.key("papermc:folia"));
 
     @Getter
     private static Malts instance;
@@ -78,11 +84,19 @@ public class Malts extends JavaPlugin {
                 ExceptionUtil.unsafe(integration::unregister)
         );
 
-
-        for (Player player : getServer().getOnlinePlayers()) {
+        Consumer<Player> consumer = (player) -> {
             Inventory inv = player.getOpenInventory().getTopInventory();
             if (inv.getHolder(false) instanceof MaltsInventory) {
                 player.closeInventory();
+            }
+        };
+        for (Player player : getServer().getOnlinePlayers()) {
+            if (FOLIA) {
+                player.getScheduler().execute(this, () -> {
+                    consumer.accept(player);
+                }, null, 1);
+            } else {
+                consumer.accept(player);
             }
         }
 
