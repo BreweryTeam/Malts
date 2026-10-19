@@ -97,8 +97,7 @@ public enum WarehouseMode {
 
         ItemStack item = warehouse.destockItem(player, material, invAmt);
         if (item != null) {
-            int amt = item.getAmount();
-            inv.addItem(item);
+            int amt = warehouse.addDestockedItem(player, inv, item);
             CoreProtectIntegration coreProtectIntegration = Registry.INTEGRATIONS.get(CoreProtectIntegration.class);
             if (coreProtectIntegration != null) {
                 coreProtectIntegration.logContainer(player, container);
@@ -147,10 +146,10 @@ public enum WarehouseMode {
             if (item == null) {
                 return;
             }
-            player.getInventory().addItem(item);
+            int amt = warehouse.addDestockedItem(player, player.getInventory(), item);
             ConfigManager.get(Lang.class).actionBarEntry(l -> l.warehouse().replenishedItem(), player,
                     Couple.of("{material}", Util.formatEnumerator(material)),
-                    Couple.of("{amount}", item.getAmount()),
+                    Couple.of("{amount}", amt),
                     Couple.of("{stock}", warehouse.getQuantity(material))
             );
         });

@@ -155,6 +155,25 @@ public class Warehouse implements CachedObject {
         return ItemStack.of(material, finalAmt);
     }
 
+    public int addDestockedItem(Player player, Inventory inv, ItemStack item) {
+        Material material = item.getType();
+        int amount = item.getAmount();
+        Map<Integer, ItemStack> leftovers = inv.addItem(item);
+        int leftover = leftovers.values().stream().mapToInt(ItemStack::getAmount).sum();
+        if (leftover < 1) {
+            return amount;
+        }
+
+        Stock stock = warehouseMap.get(material);
+        if (stock != null) {
+            stock.increase(leftover);
+            MaltsLogger.logger().logWarehouse(LogAction.WAREHOUSE_STOCK, player, owner, material, leftover);
+        } else {
+            leftovers.values().forEach(i -> player.getWorld().dropItem(player.getLocation(), i));
+        }
+        return amount - leftover;
+    }
+
     public boolean canStock(Material material) {
         return !((CONFIG.warehouse().blacklistSingleStackMaterials() && material.getMaxStackSize() == 1) || CONFIG.warehouse().blacklistedMaterials().contains(material));
     }
@@ -291,9 +310,9 @@ public class Warehouse implements CachedObject {
 
         ItemStack itemStack = destockItem(player, material, toDestock);
         if (itemStack != null) {
-            inv.addItem(itemStack);
+            int added = addDestockedItem(player, inv, itemStack);
             LANG.entry(l -> l.warehouse().withdrewItem(), player,
-                    Couple.of("{amount}", toDestock),
+                    Couple.of("{amount}", added),
                     Couple.of("{material}", Util.formatEnumerator(material)),
                     Couple.of("{stock}", this.getQuantity(material))
             );
@@ -345,7 +364,7 @@ public class Warehouse implements CachedObject {
                                             Couple.of("{material}", Util.formatEnumerator(material.toString()))
                                     );
                                 } else {
-                                    inv.addItem(item);
+                                    addDestockedItem(player, inv, item);
                                 }
                             }
                             case RIGHT -> {
@@ -354,13 +373,13 @@ public class Warehouse implements CachedObject {
                                     LANG.entry(l -> l.warehouse().inventoryFull(), player);
                                     return;
                                 }
-                                ItemStack item = destockItem(player, material, 64);
+                                ItemStack item = destockItem(player, material, Math.min(64, invAmt));
                                 if (item == null) {
                                     LANG.entry(l -> l.warehouse().notEnoughMaterial(), player,
                                             Couple.of("{material}", Util.formatEnumerator(material.toString()))
                                     );
                                 } else {
-                                    inv.addItem(item);
+                                    addDestockedItem(player, inv, item);
                                 }
                             }
                             case SHIFT_LEFT -> {
@@ -372,7 +391,7 @@ public class Warehouse implements CachedObject {
 
                                 ItemStack item = destockItem(player, material, invAmt);
                                 if (item != null) {
-                                    inv.addItem(item);
+                                    addDestockedItem(player, inv, item);
                                 } else {
                                     LANG.entry(l -> l.warehouse().notEnoughMaterial(), player,
                                             Couple.of("{material}", Util.formatEnumerator(material.toString()))
