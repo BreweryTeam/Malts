@@ -57,7 +57,7 @@ public class WarehouseGui extends MaltsGui {
 
                 Inventory inv = paginatedGui.getPrevious(e.getInventory());
                 if (inv != null) {
-                    player.openInventory(inv);
+                    openPage(player, inv);
                 } else {
                     LANG.entry(l -> l.gui().firstPage(), player);
                 }
@@ -75,7 +75,7 @@ public class WarehouseGui extends MaltsGui {
 
                 Inventory inv = paginatedGui.getNext(e.getInventory());
                 if (inv != null) {
-                    player.openInventory(inv);
+                    openPage(player, inv);
                 } else {
                     LANG.entry(l -> l.gui().lastPage(), player);
                 }
@@ -257,7 +257,16 @@ public class WarehouseGui extends MaltsGui {
 
     @Override
     public void openImpl(Player player) {
-        player.openInventory(this.paginatedGui.getPage(0));
+        player.openInventory(this.paginatedGui.getPageClamped(PageMemory.get(player.getUniqueId(), pageKey())));
+    }
+
+    private String pageKey() {
+        return "warehouse:" + maltsPlayer.getUuid();
+    }
+
+    private void openPage(Player player, Inventory page) {
+        PageMemory.set(player.getUniqueId(), pageKey(), paginatedGui.indexOf(page));
+        player.openInventory(page);
     }
 
     private void refresh(Player player) {

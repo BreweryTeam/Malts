@@ -57,6 +57,10 @@ public class PaginatedGui {
         return pages.get(page);
     }
 
+    public Inventory getPageClamped(int page) {
+        return pages.get(Math.max(0, Math.min(page, pages.size() - 1)));
+    }
+
     public int indexOf(Inventory page) {
         return pages.indexOf(page);
     }

@@ -56,7 +56,7 @@ public class YourVaultsGui extends MaltsGui implements PromisedInventory {
 
                 Inventory inv = paginatedGui.getPrevious(e.getInventory());
                 if (inv != null) {
-                    player.openInventory(inv);
+                    openPage(player, inv);
                 } else {
                     LANG.entry(l -> l.gui().firstPage(), player);
                 }
@@ -73,7 +73,7 @@ public class YourVaultsGui extends MaltsGui implements PromisedInventory {
 
                 Inventory inv = paginatedGui.getNext(e.getInventory());
                 if (inv != null) {
-                    player.openInventory(inv);
+                    openPage(player, inv);
                 } else {
                     LANG.entry(l -> l.gui().lastPage(), player);
                 }
@@ -151,9 +151,19 @@ public class YourVaultsGui extends MaltsGui implements PromisedInventory {
 
     @Override
     public void openImpl(Player player) {
-        promiseInventory().thenAccept(inventory -> {
-            Executors.sync(player, () -> player.openInventory(inventory));
+        promiseInventory().thenAccept(ignored -> {
+            Executors.sync(player, () -> player.openInventory(
+                    this.paginatedGui.getPageClamped(PageMemory.get(player.getUniqueId(), pageKey()))));
         });
+    }
+
+    private String pageKey() {
+        return "vaults:" + maltsPlayer.getUuid();
+    }
+
+    private void openPage(Player player, Inventory page) {
+        PageMemory.set(player.getUniqueId(), pageKey(), paginatedGui.indexOf(page));
+        player.openInventory(page);
     }
 
 

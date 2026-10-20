@@ -1,5 +1,6 @@
 package dev.jsinco.malts.events;
 
+import dev.jsinco.malts.gui.PageMemory;
 import dev.jsinco.malts.integration.compiled.UpdateCheckIntegration;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Warehouse;
@@ -44,6 +45,7 @@ public class PlayerListener implements Listener {
         DataSource dataSource = DataSource.getInstance();
         dataSource.uncacheObject(player.getUniqueId(), MaltsPlayer.class);
         dataSource.uncacheObject(player.getUniqueId(), Warehouse.class);
+        PageMemory.clear(player.getUniqueId());
     }
 
 
