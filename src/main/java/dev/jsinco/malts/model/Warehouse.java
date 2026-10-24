@@ -87,14 +87,16 @@ public class Warehouse implements CachedObject {
 
         if (!material.isItem()) {
             throw new IllegalArgumentException("Material must be an item");
-        } else if (currentStockQuantity + amt > maxWarehouseStock) {
-            amt = maxWarehouseStock - currentStockQuantity;
         }
+
+        // Clamp to remaining capacity. Capacity can be negative when stock exceeds a (since lowered) limit
+        int remainingCapacity = Math.max(0, maxWarehouseStock - currentStockQuantity);
+        amt = Math.clamp(amt, 0, remainingCapacity);
 
         WarehouseStockEvent stockEvent = new WarehouseStockEvent(this, material, amt, async);
         if (!stockEvent.callEvent()) return 0;
         material = stockEvent.getMaterial();
-        amt = stockEvent.getAmount();
+        amt = Math.max(0, stockEvent.getAmount());
 
 
         Stock stock = warehouseMap.get(material);
