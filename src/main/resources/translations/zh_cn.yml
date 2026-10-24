@@ -69,6 +69,8 @@ command:
     <green>/malts vaultother <保险箱名称> <页码?> - <gray>浏览其他玩家的保险箱。
     <green>/malts vaults <页码?> - <gray>打开自己的保险箱。
     <green>/malts warehouseadmin <仓库名称> - <gray>管理其他玩家的仓库。
+    <green>/malts warehouseadmin <玩家名称> <list|get|add|remove|set> <物品材质?> <数量?> - <gray>直接编辑其他玩家的仓库。
+    <green>/malts warehouseadmin <玩家名称> transfer <接收玩家> <物品材质|all> <数量|all?> - <gray>将仓库库存转移给其他玩家。
     <green>/malts warehouse - <gray>打开你的仓库。
     <green>/malts quickreturn <left|middle|right|none> - <gray>设置快捷返回点击选项。
     <green>/malts vaultname <保险箱名称> - <gray>通过名称打开保险箱。
@@ -109,3 +111,21 @@ command:
       <gold>----- <green>{previousPage} <gray>第 {page}/{maxPages} 页</gray> {nextPage}</green> -----</gold>
     previousPage: '«'
     nextPage: '»'
+  warehouseAdmin:
+    invalidMaterial: '<aqua><b>{material}</b></aqua> 不是有效的物品。'
+    compartmentAdded: 已向 {name} 的仓库添加 <aqua><b>{material}</b></aqua> 隔间。
+    compartmentRemoved: 已从 {name} 的仓库移除 <aqua><b>{material}</b></aqua> 隔间。
+    compartmentAlreadyExists: '{name} 的仓库已经有 <aqua><b>{material}</b></aqua> 隔间了。'
+    compartmentDoesNotExist: '{name} 的仓库没有 <aqua><b>{material}</b></aqua> 隔间。'
+    cannotRemoveCompartment: "{name} 的 <aqua><b>{material}</b></aqua> 隔间仍存有 {amount} 个物品。<hover:show_text:'点击填入命令'><click:suggest_command:'/malts warehouseadmin {name} set {materialKey} 0'>请先将其设置为 <aqua>0</aqua>。</click></hover>"
+    stockGet: "{name} 的仓库中有 <aqua><b>{amount}x {material}</b></aqua>。<gray>（总计：{stock}/{maxStock}）</gray>"
+    cannotTransferSamePlayer: 无法将仓库库存转移给同一名玩家。
+    nothingToTransfer: '{name} 没有可转移的 <aqua><b>{material}</b></aqua>。'
+    nothingToTransferAll: '{name} 的仓库没有可转移的库存。'
+    notEnoughToTransfer: '{name} 只有 <aqua><b>{available}x {material}</b></aqua>。'
+    transferred: "已将 <aqua><b>{amount}x {material}</b></aqua> 从 {name} 转移给 {otherName}。<gray>（{otherName}：{otherStock}/{otherMaxStock}）</gray>"
+    transferredAll: "已将 {name} 的 {compartments} 个隔间共 <aqua><b>{amount}</b></aqua> 个物品转移给 {otherName}。<gray>（{otherName}：{otherStock}/{otherMaxStock}）</gray>"
+    stockSet: "已将 {name} 的 <aqua><b>{material}</b></aqua> 库存从 {oldAmount} 设置为 {newAmount}。<gray>（总计：{stock}/{maxStock}）</gray>"
+    listHeader: "<gold>---- <aqua><b>{name} 的仓库</b></aqua> <gray>（{stock}/{maxStock}）</gray> ----</gold>"
+    listEntry: '<#7b75aa>• {material}：<aqua>{amount}</aqua>'
+    listEmpty: '{name} 的仓库没有任何隔间。'

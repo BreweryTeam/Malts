@@ -102,6 +102,7 @@ public class Lang extends OkaeriFile {
         private Reload reload = new Reload();
         private QuickReturn quickReturn = new QuickReturn();
         private Search search = new Search();
+        private WarehouseAdmin warehouseAdmin = new WarehouseAdmin();
 
         @Getter
         @Accessors(fluent = true)
@@ -158,6 +159,28 @@ public class Lang extends OkaeriFile {
             private String nextPage;
             private String playerNotFound;
             private String noAccessibleVaults;
+        }
+
+        @Getter
+        @Accessors(fluent = true)
+        public static class WarehouseAdmin extends OkaeriConfig {
+            private String invalidMaterial;
+            private String compartmentAdded;
+            private String compartmentRemoved;
+            private String compartmentAlreadyExists;
+            private String compartmentDoesNotExist;
+            private String cannotRemoveCompartment;
+            private String stockSet;
+            private String stockGet;
+            private String cannotTransferSamePlayer;
+            private String nothingToTransfer;
+            private String nothingToTransferAll;
+            private String notEnoughToTransfer;
+            private String transferred;
+            private String transferredAll;
+            private String listHeader;
+            private String listEntry;
+            private String listEmpty;
         }
     }
 

@@ -69,6 +69,8 @@ command:
     <green>/malts vaultother <name> <index?> - <gray>Open a vault(s) you're trusted to view.
     <green>/malts vaults <index?> - <gray>Open a vault(s) you own.
     <green>/malts warehouseadmin <name> - <gray>Manage the warehouse of another player.
+    <green>/malts warehouseadmin <name> <list|get|add|remove|set> <material?> <amount?> - <gray>Edit another player's warehouse directly.
+    <green>/malts warehouseadmin <name> transfer <recipient> <material|all> <amount|all?> - <gray>Move warehouse stock to another player.
     <green>/malts warehouse - <gray>Open your warehouse.
     <green>/malts quickreturn <left|middle|right|none> - <gray>Set your quick return click preference.
     <green>/malts vaultname <name> - <gray>Open a vault by its name.
@@ -109,3 +111,21 @@ command:
       <gold>----- <green>{previousPage} <gray>Page: {page}/{maxPages}</gray> {nextPage}</green> -----</gold>
     previousPage: '«'
     nextPage: '»'
+  warehouseAdmin:
+    invalidMaterial: '<aqua><b>{material}</b></aqua> is not a valid item.'
+    compartmentAdded: Added compartment <aqua><b>{material}</b></aqua> to {name}'s warehouse.
+    compartmentRemoved: Removed compartment <aqua><b>{material}</b></aqua> from {name}'s warehouse.
+    compartmentAlreadyExists: '{name} already has a <aqua><b>{material}</b></aqua> compartment.'
+    compartmentDoesNotExist: '{name} has no <aqua><b>{material}</b></aqua> compartment.'
+    cannotRemoveCompartment: "{name}'s <aqua><b>{material}</b></aqua> compartment still holds {amount}. <hover:show_text:'Click to suggest.'><click:suggest_command:'/malts warehouseadmin {name} set {materialKey} 0'>Set it to <aqua>0</aqua> first.</click></hover>"
+    stockGet: "{name} has <aqua><b>{amount}x {material}</b></aqua> in their warehouse. <gray>(Total: {stock}/{maxStock})</gray>"
+    cannotTransferSamePlayer: Cannot transfer warehouse stock to the same player.
+    nothingToTransfer: '{name} has no <aqua><b>{material}</b></aqua> to transfer.'
+    nothingToTransferAll: '{name} has no warehouse stock to transfer.'
+    notEnoughToTransfer: '{name} only has <aqua><b>{available}x {material}</b></aqua>.'
+    transferred: "Transferred <aqua><b>{amount}x {material}</b></aqua> from {name} to {otherName}. <gray>({otherName}: {otherStock}/{otherMaxStock})</gray>"
+    transferredAll: "Transferred <aqua><b>{amount}</b></aqua> items from {compartments} compartments of {name} to {otherName}. <gray>({otherName}: {otherStock}/{otherMaxStock})</gray>"
+    stockSet: "Set {name}'s <aqua><b>{material}</b></aqua> stock from {oldAmount} to {newAmount}. <gray>(Total: {stock}/{maxStock})</gray>"
+    listHeader: "<gold>---- <aqua><b>{name}'s Warehouse</b></aqua> <gray>({stock}/{maxStock})</gray> ----</gold>"
+    listEntry: '<#7b75aa>• {material}: <aqua>{amount}</aqua>'
+    listEmpty: '{name} has no warehouse compartments.'

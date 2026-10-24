@@ -226,6 +226,33 @@ public class Warehouse implements CachedObject {
         return TriState.FALSE;
     }
 
+    public boolean forceAddCompartment(@Nullable CommandSender actor, Material material) {
+        Preconditions.checkArgument(material.isItem(), "Material must be an item");
+        if (warehouseMap.containsKey(material)) {
+            return false;
+        }
+        warehouseMap.put(material, new Stock(material));
+        MaltsLogger.logger().logWarehouseCompartment(LogAction.WAREHOUSE_ADD, actor, owner, material);
+        return true;
+    }
+
+    public int forceSetStock(@Nullable CommandSender actor, Material material, int amount) {
+        Preconditions.checkArgument(amount >= 0, "Amount cannot be negative");
+        forceAddCompartment(actor, material);
+        Stock stock = warehouseMap.get(material);
+        int oldAmount = stock.getAmount();
+        stock.setAmount(amount);
+
+        int delta = amount - oldAmount;
+        MaltsLogger logger = MaltsLogger.logger();
+        if (delta > 0) {
+            logger.logWarehouse(LogAction.WAREHOUSE_STOCK, actor, owner, material, delta);
+        } else if (delta < 0) {
+            logger.logWarehouse(LogAction.WAREHOUSE_DESTOCK, actor, owner, material, -delta);
+        }
+        return oldAmount;
+    }
+
     public boolean hasCompartment(Material material) {
         return warehouseMap.containsKey(material);
     }
