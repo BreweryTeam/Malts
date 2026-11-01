@@ -73,6 +73,7 @@ public abstract class DataSource {
 
     public abstract CompletableFuture<@NotNull Collection<SnapshotVault>> getVaults(UUID owner);
     public abstract CompletableFuture<Void> saveVault(Vault vault);
+    protected abstract CompletableFuture<Boolean> updateVaultMeta(Vault vault);
     public abstract CompletableFuture<@NotNull Boolean> deleteVault(UUID owner, int id);
     public abstract CompletableFuture<@NotNull Integer> deleteVaults(UUID owner);
     public abstract CompletableFuture<@NotNull Collection<Vault>> getAllVaults(); // Used for exporting vaults. (Mainly to other plugins)
@@ -92,6 +93,10 @@ public abstract class DataSource {
     // Abstract Utility
 
     protected abstract CompletableFuture<Void> saveCachedObjects(Collection<CachedObject> objects);
+
+    public CompletableFuture<Void> saveVaultMeta(Vault vault) {
+        return updateVaultMeta(vault).thenCompose(updated -> updated ? CompletableFuture.completedFuture(null) : saveVault(vault));
+    }
 
     public CompletableFuture<@NotNull Vault> getVault(UUID owner, int id) {
         return getVault(owner, id, true);
@@ -242,7 +247,8 @@ public abstract class DataSource {
                     rs.getString("inventory"),
                     rs.getString("custom_name"),
                     Material.getMaterial(rs.getString("icon")),
-                    rs.getString("trusted_players")
+                    rs.getString("trusted_players"),
+                    rs.getBoolean("locked")
             );
         }
         return create ? new Vault(owner, id) : null;
@@ -257,7 +263,8 @@ public abstract class DataSource {
                     rs.getString("inventory"),
                     rs.getString("custom_name"),
                     Material.getMaterial(rs.getString("icon")),
-                    rs.getString("trusted_players")
+                    rs.getString("trusted_players"),
+                    rs.getBoolean("locked")
             );
         }
         return null;
@@ -273,7 +280,8 @@ public abstract class DataSource {
                             rs.getString("inventory"),
                             rs.getString("custom_name"),
                             Material.getMaterial(rs.getString("icon")),
-                            rs.getString("trusted_players")
+                            rs.getString("trusted_players"),
+                            rs.getBoolean("locked")
                     )
             );
         }

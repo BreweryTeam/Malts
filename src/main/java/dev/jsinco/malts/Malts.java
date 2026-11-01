@@ -10,9 +10,11 @@ import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.events.ChatPromptInputListener;
 import dev.jsinco.malts.events.GuiListener;
 import dev.jsinco.malts.events.PlayerListener;
+import dev.jsinco.malts.events.VaultBorrowListener;
 import dev.jsinco.malts.events.VaultListener;
 import dev.jsinco.malts.events.WarehouseListener;
 import dev.jsinco.malts.integration.Integration;
+import dev.jsinco.malts.integration.external.NexoIntegration;
 import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.logging.VaultLogListener;
 import dev.jsinco.malts.model.MaltsInventory;
@@ -44,6 +46,7 @@ public class Malts extends JavaPlugin {
     @Override
     public void onLoad() {
         instance = this;
+        NexoIntegration.writePackAssetsIfPresent();
     }
 
     @Override
@@ -63,6 +66,7 @@ public class Malts extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new PlayerListener(), this);
         getServer().getPluginManager().registerEvents(new VaultListener(), this);
+        getServer().getPluginManager().registerEvents(new VaultBorrowListener(), this);
         getServer().getPluginManager().registerEvents(new VaultLogListener(), this);
         getServer().getPluginManager().registerEvents(new WarehouseListener(), this);
         getServer().getPluginManager().registerEvents(new GuiListener(), this);

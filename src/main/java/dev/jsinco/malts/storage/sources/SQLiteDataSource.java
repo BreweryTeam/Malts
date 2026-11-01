@@ -73,12 +73,14 @@ public class SQLiteDataSource extends DataSource {
         return Executors.supplyAsyncWithSQLException(() -> {
             try (Connection connection = this.connection()) {
                 for (String statement : this.getStatements("tables/sqlite/create_tables.sql")) {
-                    connection.prepareStatement(statement).execute();
-                }
-            } catch (SQLException ex) {
-                // i hate sqlite so much
-                if (!ex.getMessage().contains("duplicate column name")) {
-                    ex.printStackTrace();
+                    try {
+                        connection.prepareStatement(statement).execute();
+                    } catch (SQLException ex) {
+                        // i hate sqlite so much
+                        if (!ex.getMessage().contains("duplicate column name")) {
+                            ex.printStackTrace();
+                        }
+                    }
                 }
             }
             return null;
@@ -144,10 +146,29 @@ public class SQLiteDataSource extends DataSource {
                 statement.setString(4, vault.getCustomName());
                 statement.setString(5, vault.getIcon().toString());
                 statement.setString(6, vault.encodeTrusted());
+                statement.setBoolean(7, vault.isLocked());
                 statement.executeUpdate();
                 Text.debug("Saved vault: " + vault.getOwner() + " #" + vault.getId());
             }
             return null;
+        }, singleThread);
+    }
+
+    @Override
+    protected CompletableFuture<Boolean> updateVaultMeta(Vault vault) {
+        return Executors.supplyAsyncWithSQLException(() -> {
+            try (Connection connection = this.connection()) {
+                PreparedStatement statement = connection.prepareStatement(
+                        this.getStatement("vaults/update_vault_meta.sql")
+                );
+                statement.setString(1, vault.getCustomName());
+                statement.setString(2, vault.getIcon().toString());
+                statement.setString(3, vault.encodeTrusted());
+                statement.setBoolean(4, vault.isLocked());
+                statement.setString(5, vault.getOwner().toString());
+                statement.setInt(6, vault.getId());
+                return statement.executeUpdate() > 0;
+            }
         }, singleThread);
     }
 

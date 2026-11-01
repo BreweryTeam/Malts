@@ -9,6 +9,7 @@ website: github.com/BreweryTeam/Malts
 load: POSTWORLD
 softdepend:
   - PlaceholderAPI
+  - Nexo
 folia-supported: true
 commands:
   malts:

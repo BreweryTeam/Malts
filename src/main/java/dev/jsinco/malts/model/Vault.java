@@ -62,6 +62,7 @@ public class Vault implements MaltsInventory {
     @NotNull
     private Material icon;
     private List<UUID> trustedPlayers;
+    private boolean locked;
 
     public Vault(UUID owner, int id) {
         Preconditions.checkArgument(id > 0, "Vault ID must be greater than 0");
@@ -91,8 +92,9 @@ public class Vault implements MaltsInventory {
         }
     }
 
-    public Vault(UUID owner, int id, String encodedInventory, String customName, Material icon, String trustedPlayers) {
+    public Vault(UUID owner, int id, String encodedInventory, String customName, Material icon, String trustedPlayers, boolean locked) {
         this.key = VaultKey.of(owner, id);
+        this.locked = locked;
         this.customName = customName != null && !customName.isEmpty() ? customName : "Vault #" + id;
         this.icon = icon != null && icon.isItem() ? icon : CONFIG.vaults().defaultIcon();
 
@@ -355,8 +357,34 @@ public class Vault implements MaltsInventory {
         copy.setCustomName(this.customName);
         copy.setIcon(this.icon);
         copy.setTrustedPlayers(new ArrayList<>(this.trustedPlayers));
+        copy.setLocked(this.locked);
         copy.getInventory().setContents(this.getInventory().getContents());
         return copy;
+    }
+
+    /**
+     * Saves only this vault's metadata and applies it to any open copies, so editing a vault
+     * while someone has it open neither reverts their items nor gets reverted when they close it.
+     */
+    public CompletableFuture<Void> saveMeta() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Executors.runSync(player, () -> {
+                if (player.getOpenInventory().getTopInventory().getHolder(false) instanceof Vault open && this.equals(open) && open != this) {
+                    open.customName = this.customName;
+                    open.icon = this.icon;
+                    open.trustedPlayers = new ArrayList<>(this.trustedPlayers);
+                    open.locked = this.locked;
+                }
+            });
+        }
+        return DataSource.getInstance().saveVaultMeta(this);
+    }
+
+    /**
+     * @return true if this vault is locked and locking is enabled in the config
+     */
+    public boolean isLockActive() {
+        return this.locked && CONFIG.vaults().lockingEnabled();
     }
 
     public UUID getOwner() {

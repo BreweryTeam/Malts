@@ -85,6 +85,22 @@ public class GuiConfig extends OkaeriFile {
                 8,
                 "{name}"
         );
+        private EditVaultGuiToggleItem lockButton = new EditVaultGuiToggleItem(
+                "<aqua>Lock Vault <gray>({state})",
+                List.of(
+                        "",
+                        "<white>While locked, taken items leave",
+                        "<white>a placeholder behind and can only",
+                        "<white>be put back into their own slot.",
+                        "",
+                        "<white>Click to toggle."
+                ),
+                Material.CLOSED_EYEBLOSSOM,
+                Material.OPEN_EYEBLOSSOM,
+                "<red>Locked</red>",
+                "<green>Unlocked</green>",
+                5
+        );
 
         @Getter
         @Accessors(fluent = true)
@@ -93,6 +109,19 @@ public class GuiConfig extends OkaeriFile {
             private String name;
             private List<String> lore;
             private Material material;
+            private int slot;
+        }
+
+        @Getter
+        @Accessors(fluent = true)
+        @AllArgsConstructor
+        public static class EditVaultGuiToggleItem extends OkaeriConfig {
+            private String name;
+            private List<String> lore;
+            private Material lockedMaterial;
+            private Material unlockedMaterial;
+            private String lockedState;
+            private String unlockedState;
             private int slot;
         }
 

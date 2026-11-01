@@ -40,6 +40,15 @@ vaults:
   transferred: Transferred {amount}x vaults from {name} to {otherName} and {otherAmount}x vaults from {otherName} to {name}.
   cannotTransfer: Cannot transfer vaults between the same player.
   iconChanged: Vault icon changed to <aqua><b>{material}</b></aqua>.
+  vaultLocked: '<aqua><b>{vaultName}</b></aqua> is now locked. Taken items will be tracked until they are returned.'
+  vaultUnlocked: '<aqua><b>{vaultName}</b></aqua> is now unlocked.'
+  lockingDisabled: Vault locking is disabled on this server.
+  confirmRemoveBorrowed: '<red>Press <b>Q</b> again to remove this borrowed item placeholder.'
+  borrowedDateFormat: 'yyyy-MM-dd HH:mm'
+  borrowedLore:
+    - ''
+    - '<gray>Borrowed by <aqua>{name}'
+    - '<gray>{date} <dark_gray>({timeAgo} ago)'
 
 gui:
   firstPage: You are on the first page.
@@ -66,6 +75,8 @@ command:
     <green>/malts max <vaults|stock> <add|set|remove> <name> <newMax> - <gray>Adjust vault or stock caps dynamically.
     <green>/malts reload - <gray>Reload configuration files.
     <green>/malts vaultadmin <delete|open> <name> <index?> - <gray>Manage other players vaults.
+    <green>/malts vaultadmin edit <name> <index> <name|icon|trust|locked> <value> - <gray>Edit other players vaults.
+    <green>/malts editvault <index> <name|icon|trust|locked> <value> - <gray>Edit one of your vaults.
     <green>/malts vaultother <name> <index?> - <gray>Open a vault(s) you're trusted to view.
     <green>/malts vaults <index?> - <gray>Open a vault(s) you own.
     <green>/malts warehouseadmin <name> - <gray>Manage the warehouse of another player.

@@ -2,10 +2,12 @@ package dev.jsinco.malts.gui;
 
 import com.google.common.base.Preconditions;
 import dev.jsinco.malts.configuration.ConfigManager;
+import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.configuration.files.GuiConfig;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.events.ChatPromptInputListener.ChatInputCallback;
 import dev.jsinco.malts.gui.item.GuiItem;
+import dev.jsinco.malts.gui.item.IgnoreAutoRegister;
 import dev.jsinco.malts.gui.item.ItemConfirmation;
 import dev.jsinco.malts.gui.item.UncontainedGuiItem;
 import dev.jsinco.malts.logging.MaltsLogger;
@@ -77,7 +79,7 @@ public class EditVaultGui extends MaltsGui {
                         input -> {
                             String oldName = vault.getCustomName();
                             if (!vault.setCustomName(input)) return;
-                            DataSource.getInstance().saveVault(vault);
+                            vault.saveMeta();
 
                             MaltsLogger.logger().logVaultName(player, vault, oldName, vault.getCustomName());
                             LANG.entry(l -> l.vaults().nameChanged(), player, Couple.of("{vaultName}", vault.getCustomName()));
@@ -118,13 +120,35 @@ public class EditVaultGui extends MaltsGui {
                     Material oldIcon = vault.getIcon();
                     if (!vault.setIcon(newType)) return;
 
-                    DataSource.getInstance().saveVault(vault);
+                    vault.saveMeta();
 
                     MaltsLogger.logger().logVaultIcon((Player) event.getWhoClicked(), vault, oldIcon, newType);
                     iconItem.setType(newType); // TODO: deprecated method
                     itemConfirmation.setConfirmation(false);
                     LANG.entry(l -> l.vaults().iconChanged(), event.getWhoClicked(), Couple.of("{material}", Util.formatEnumerator(newType)));
                 }
+            })
+            .build();
+
+    @SuppressWarnings("unchecked")
+    @IgnoreAutoRegister
+    private final GuiItem lockButton = GuiItem.builder()
+            .index(() -> CONFIG.editVaultGui().lockButton().slot())
+            .itemStack(b -> {
+                GuiConfig.EditVaultGui.EditVaultGuiToggleItem cfg = CONFIG.editVaultGui().lockButton();
+                return b
+                        .stringReplacements(Couple.of("{state}", vault.isLocked() ? cfg.lockedState() : cfg.unlockedState()))
+                        .displayName(cfg.name())
+                        .material(vault.isLocked() ? cfg.lockedMaterial() : cfg.unlockedMaterial())
+                        .lore(cfg.lore());
+            })
+            .action(event -> {
+                Player player = (Player) event.getWhoClicked();
+                boolean locked = !vault.isLocked();
+                vault.setLocked(locked);
+                vault.saveMeta();
+                LANG.entry(l -> locked ? l.vaults().vaultLocked() : l.vaults().vaultUnlocked(), player, Couple.of("{vaultName}", vault.getCustomName()));
+                event.getInventory().setItem(event.getSlot(), this.lockButton.getItemStack(false));
             })
             .build();
 
@@ -179,7 +203,7 @@ public class EditVaultGui extends MaltsGui {
                                 LANG.entry(l -> l.vaults().trustListMaxed(), player, Couple.of("{trustedListSize}", trustListCap(vault.getOwner())));
                             }
 
-                            DataSource.getInstance().saveVault(vault);
+                            vault.saveMeta();
 
                             Util.editMeta(clickedItem, meta -> {
                                 meta.displayName(Text.mmNoItalic(CONFIG.editVaultGui().editTrustListButton().name().replace("{trustedListSize}", trustListCap(vault.getOwner())), NamedTextColor.AQUA));
@@ -207,6 +231,9 @@ public class EditVaultGui extends MaltsGui {
         this.player = player;
 
         this.autoRegister(false);
+        if (ConfigManager.get(Config.class).vaults().lockingEnabled()) {
+            this.addGuiItem(lockButton);
+        }
 
         if (CONFIG.editVaultGui().borders()) {
             for (int i = 0; i < this.inventory.getSize(); i++) {

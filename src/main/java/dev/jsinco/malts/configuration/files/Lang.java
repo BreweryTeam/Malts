@@ -78,6 +78,12 @@ public class Lang extends OkaeriFile {
         private String transferred;
         private String cannotTransfer;
         private String iconChanged;
+        private String vaultLocked;
+        private String vaultUnlocked;
+        private String lockingDisabled;
+        private String confirmRemoveBorrowed;
+        private String borrowedDateFormat;
+        private List<String> borrowedLore;
     }
 
     @Getter

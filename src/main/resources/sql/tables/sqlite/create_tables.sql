@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS malts_vaults(
     custom_name TEXT,
     icon TEXT,
     trusted_players TEXT,
+    locked INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (owner, id)
 );
 
@@ -27,3 +28,4 @@ CREATE TABLE IF NOT EXISTS malts_warehouses(
 
 -- Migration code
 ALTER TABLE malts_players ADD COLUMN quick_return_click_type TEXT;
+ALTER TABLE malts_vaults ADD COLUMN locked INTEGER NOT NULL DEFAULT 0;

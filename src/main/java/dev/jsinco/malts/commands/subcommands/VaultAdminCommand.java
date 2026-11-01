@@ -239,7 +239,7 @@ public class VaultAdminCommand implements SubCommand {
             String oldName = vault.getCustomName();
             vault.forceSetCustomName(newName);
             LANG.entry(l -> l.vaults().nameChanged(), sender, Couple.of("{vaultName}", newName));
-            dataSource.saveVault(vault);
+            vault.saveMeta();
             MaltsLogger.logger().logVaultName(sender, vault, oldName, newName);
             return true;
         }, ownerUuid -> List.of()),
@@ -249,7 +249,7 @@ public class VaultAdminCommand implements SubCommand {
             if (material == null || !material.isItem()) return false;
             Material oldIcon = vault.getIcon();
             vault.forceSetIcon(material);
-            dataSource.saveVault(vault);
+            vault.saveMeta();
             LANG.entry(l -> l.vaults().iconChanged(), sender, Couple.of("{material}", Util.formatEnumerator(material)));
             MaltsLogger.logger().logVaultIcon(sender, vault, oldIcon, material);
             return true;
@@ -273,10 +273,11 @@ public class VaultAdminCommand implements SubCommand {
                 LANG.entry(l -> l.vaults().playerTrusted(), sender, Couple.of("{name}", name));
                 nowTrusted = true;
             }
-            dataSource.saveVault(vault);
+            vault.saveMeta();
             MaltsLogger.logger().logVaultTrust(sender, vault, targetUUID, nowTrusted);
             return true;
-        }, ownerUuid -> Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()));
+        }, ownerUuid -> Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList())),
+        LOCKED((dataSource, sender, vault, args) -> EditVaultCommand.forceSetLocked(sender, vault, args), ownerUuid -> List.of("true", "false"));
 
         private final EditHandler executor;
         private final EditTabCompleter tabCompleter;

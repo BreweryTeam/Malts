@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -74,7 +75,9 @@ public class EditVaultCommand implements SubCommand {
                         .collect(Collectors.toList());
             }
 
-            case 2 -> Stream.of(ArgOption.values()).map(it -> it.toString().toLowerCase()).toList();
+            case 2 -> Stream.of(ArgOption.values())
+                    .filter(it -> it != ArgOption.LOCKED || ConfigManager.get(Config.class).vaults().lockingEnabled())
+                    .map(it -> it.toString().toLowerCase()).toList();
 
             case 3 -> {
                 ArgOption option = Util.getEnum(args.get(1), ArgOption.class);
@@ -85,6 +88,26 @@ public class EditVaultCommand implements SubCommand {
             }
             default -> List.of();
         };
+    }
+
+    static boolean setLocked(DataSource dataSource, CommandSender sender, Vault vault, List<String> args) {
+        if (!ConfigManager.get(Config.class).vaults().lockingEnabled()) {
+            LANG.entry(l -> l.vaults().lockingDisabled(), sender);
+            return true;
+        }
+        return forceSetLocked(sender, vault, args);
+    }
+
+    static boolean forceSetLocked(CommandSender sender, Vault vault, List<String> args) {
+        if (args.isEmpty()) return false;
+        String value = args.getFirst().toLowerCase(Locale.ROOT);
+        if (!value.equals("true") && !value.equals("false")) return false;
+
+        boolean locked = value.equals("true");
+        vault.setLocked(locked);
+        vault.saveMeta();
+        LANG.entry(l -> locked ? l.vaults().vaultLocked() : l.vaults().vaultUnlocked(), sender, Couple.of("{vaultName}", vault.getCustomName()));
+        return true;
     }
 
     @Override
@@ -114,7 +137,7 @@ public class EditVaultCommand implements SubCommand {
             String oldName = vault.getCustomName();
             if (vault.setCustomName(newName)) {
                 LANG.entry(l -> l.vaults().nameChanged(), sender, Couple.of("{vaultName}", newName));
-                dataSource.saveVault(vault);
+                vault.saveMeta();
                 MaltsLogger.logger().logVaultName(sender, vault, oldName, newName);
             } else {
                 LANG.entry(l -> l.vaults().vaultNameTooLong(), sender, Couple.of("{maxLength}", maxLength));
@@ -130,7 +153,7 @@ public class EditVaultCommand implements SubCommand {
             Material oldIcon = vault.getIcon();
             if (!vault.setIcon(material)) return false;
 
-            dataSource.saveVault(vault);
+            vault.saveMeta();
             LANG.entry(l -> l.vaults().iconChanged(), sender, Couple.of("{material}", Util.formatEnumerator(material)));
             MaltsLogger.logger().logVaultIcon(sender, vault, oldIcon, material);
             return true;
@@ -165,7 +188,7 @@ public class EditVaultCommand implements SubCommand {
                 LANG.entry(l -> l.vaults().trustListMaxed(), sender, Couple.of("{trustedListSize}", trustListCap));
             }
 
-            dataSource.saveVault(vault);
+            vault.saveMeta();
             return true;
         }, (sender, vaultId) ->{
             UUID playerUUID = sender.getUniqueId();
@@ -191,7 +214,8 @@ public class EditVaultCommand implements SubCommand {
                 return List.of("...");
             }
             return cachedVaultNames.getTrustedNames();
-        });
+        }),
+        LOCKED(EditVaultCommand::setLocked, (sender, vaultId) -> List.of("true", "false"));
 
 
         private final Handler executor;

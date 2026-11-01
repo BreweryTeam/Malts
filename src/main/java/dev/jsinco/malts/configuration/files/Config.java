@@ -166,6 +166,13 @@ public class Config extends OkaeriFile {
                 "Or, by using '/malts max vaults add <player> <amount>'.",
         })
         private int defaultMaxVaults = 5;
+
+        @Comment({
+                "Allows vaults to be locked. While locked, items taken from a vault",
+                "leave a placeholder behind and can only be put back into their own slot.",
+                "When disabled, the lock option is hidden and all vaults behave as unlocked."
+        })
+        private boolean lockingEnabled = true;
     }
 
 

@@ -40,6 +40,15 @@ vaults:
   transferred: 成功从 {name} 转移了 {amount} 个保险箱到 {otherName}。从 {otherName} 转移了 {otherAmount} 个保险箱到 {name}。
   cannotTransfer: 不能在同一玩家之间转移保险箱。
   iconChanged: 保险箱图标已更换为 <aqua><b>{material}</b></aqua>.
+  vaultLocked: '<aqua><b>{vaultName}</b></aqua> 已锁定。被取出的物品将被追踪直到归还。'
+  vaultUnlocked: '<aqua><b>{vaultName}</b></aqua> 已解锁。'
+  lockingDisabled: 此服务器已禁用保险箱锁定功能。
+  confirmRemoveBorrowed: '<red>再次按下 <b>Q</b> 以移除此借出物品占位符。'
+  borrowedDateFormat: 'yyyy-MM-dd HH:mm'
+  borrowedLore:
+    - ''
+    - '<gray>借用者 <aqua>{name}'
+    - '<gray>{date} <dark_gray>({timeAgo}前)'
 
 gui:
   firstPage: 你已经在第一页了。
@@ -66,6 +75,8 @@ command:
     <green>/malts max <vaults|stock> <add|set|remove> <保险箱名称> <新上限> - <gray>动态调整保险箱或物品的数量上限。
     <green>/malts reload - <gray>重载插件配置。
     <green>/malts vaultadmin <delete|open> <保险箱名称> <页码?> - <gray>管理其他玩家的保险箱。
+    <green>/malts vaultadmin edit <玩家> <页码> <name|icon|trust|locked> <值> - <gray>编辑其他玩家的保险箱。
+    <green>/malts editvault <页码> <name|icon|trust|locked> <值> - <gray>编辑你的保险箱。
     <green>/malts vaultother <保险箱名称> <页码?> - <gray>浏览其他玩家的保险箱。
     <green>/malts vaults <页码?> - <gray>打开自己的保险箱。
     <green>/malts warehouseadmin <仓库名称> - <gray>管理其他玩家的仓库。
