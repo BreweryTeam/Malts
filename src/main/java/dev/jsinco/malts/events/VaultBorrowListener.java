@@ -139,7 +139,7 @@ public class VaultBorrowListener implements Listener {
 
         if (hotbarSlot >= 0) {
             ItemStack hotbarItem = player.getInventory().getItem(hotbarSlot);
-            if (BorrowedItems.canReturn(hotbarItem, placeholder)) {
+            if (BorrowedItems.canReturn(hotbarItem, placeholder, player, top)) {
                 top.setItem(slot, BorrowedItems.takeReturn(hotbarItem, placeholder));
                 player.getInventory().setItem(hotbarSlot, hotbarItem);
             }
@@ -147,7 +147,7 @@ public class VaultBorrowListener implements Listener {
             if (!vault.isLockActive() && (vault.getOwner().equals(player.getUniqueId()) || player.hasPermission(ADMIN_PERMISSION))) {
                 confirmRemoval(player, vault, top, slot);
             }
-        } else if (event.getClick() != ClickType.MIDDLE && BorrowedItems.canReturn(player.getItemOnCursor(), placeholder)) {
+        } else if (event.getClick() != ClickType.MIDDLE && BorrowedItems.canReturn(player.getItemOnCursor(), placeholder, player, top)) {
             ItemStack cursor = player.getItemOnCursor();
             top.setItem(slot, BorrowedItems.takeReturn(cursor, placeholder));
             player.setItemOnCursor(cursor);
@@ -157,11 +157,13 @@ public class VaultBorrowListener implements Listener {
     // Shift-clicking a borrowed item returns it to its placeholder's slot(s) instead of the first free one
     private void handleShiftReturn(InventoryClickEvent event, Vault vault, Inventory top) {
         ItemStack item = event.getCurrentItem();
+        Player player = (Player) event.getWhoClicked();
+        boolean ownOnly = item != null && !item.isEmpty() && BorrowedItems.hasBorrowed(item, player, top);
         boolean returned = false;
         for (int i = 0; i < top.getSize() && item != null && !item.isEmpty(); i++) {
             ItemStack placeholder = top.getItem(i);
             if (placeholder == null) continue;
-            if (BorrowedItems.canReturn(item, placeholder)) {
+            if (BorrowedItems.canReturn(item, placeholder) && (!ownOnly || BorrowedItems.borrowedBy(placeholder, player))) {
                 top.setItem(i, BorrowedItems.takeReturn(item, placeholder));
                 returned = true;
             }

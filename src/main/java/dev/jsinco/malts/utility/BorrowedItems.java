@@ -8,6 +8,7 @@ import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.Style;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -51,9 +52,28 @@ public final class BorrowedItems {
         if (candidate == null || candidate.isEmpty() || !isPlaceholder(placeholder)) {
             return false;
         }
-        if (candidate.getAmount() < placeholder.getAmount()) {
-            return false;
+        return candidate.getAmount() >= placeholder.getAmount() && matches(candidate, placeholder);
+    }
+
+    // Players can only return to their own placeholders, or to any if they have none for this item
+    public static boolean canReturn(@Nullable ItemStack candidate, @Nullable ItemStack placeholder, Player player, Inventory vault) {
+        return canReturn(candidate, placeholder) && (borrowedBy(placeholder, player) || !hasBorrowed(candidate, player, vault));
+    }
+
+    public static boolean hasBorrowed(ItemStack candidate, Player player, Inventory vault) {
+        for (ItemStack item : vault.getContents()) {
+            if (isPlaceholder(item) && borrowedBy(item, player) && matches(candidate, item)) {
+                return true;
+            }
         }
+        return false;
+    }
+
+    public static boolean borrowedBy(ItemStack placeholder, Player player) {
+        return player.getUniqueId().toString().equals(Util.getPersistentKey(placeholder, BORROWER, PersistentDataType.STRING));
+    }
+
+    private static boolean matches(ItemStack candidate, ItemStack placeholder) {
         byte[] original = Util.getPersistentKey(placeholder, ORIGINAL, PersistentDataType.BYTE_ARRAY);
         if (original == null) {
             return false;
@@ -118,18 +138,32 @@ public final class BorrowedItems {
         String id = UUID.randomUUID().toString();
         ItemMeta source = real.getItemMeta();
 
+        // An item model pointing to a vanilla item is shown as that item
+        Material vanillaModel = source.hasItemModel() ? vanillaItem(source.getItemModel()) : null;
+        Material type = vanillaModel != null ? vanillaModel : real.getType();
+
         // Built from scratch so no enchantments, contents or foreign PDC keys carry over
-        ItemStack placeholder = ItemStack.of(real.getType(), real.getAmount());
+        ItemStack placeholder = ItemStack.of(type);
+        if (type != real.getType()) {
+            placeholder.setData(DataComponentTypes.MAX_STACK_SIZE, real.getMaxStackSize());
+        }
+        placeholder.setAmount(real.getAmount());
         placeholder.editMeta(meta -> {
             if (source.hasCustomName()) meta.customName(source.customName());
-            if (source.hasItemName()) meta.itemName(source.itemName());
+            if (source.hasItemName()) {
+                meta.itemName(source.itemName());
+            } else if (type != real.getType()) {
+                meta.itemName(Component.translatable(real.translationKey()));
+            }
             if (source.hasCustomModelDataComponent()) meta.setCustomModelDataComponent(source.getCustomModelDataComponent());
 
+            // Custom model data needs the resource pack's own definition, which the faded model would replace
             NexoIntegration nexo = Registry.INTEGRATIONS.get(NexoIntegration.class);
-            NamespacedKey fadedModel = nexo != null && !source.hasItemModel() ? nexo.fadedModel(real.getType()) : null;
+            boolean customModel = (source.hasItemModel() && vanillaModel == null) || source.hasCustomModelDataComponent();
+            NamespacedKey fadedModel = nexo != null && !customModel ? nexo.fadedModel(type) : null;
             if (fadedModel != null) {
                 meta.setItemModel(fadedModel);
-            } else if (source.hasItemModel()) {
+            } else if (source.hasItemModel() && vanillaModel == null) {
                 meta.setItemModel(source.getItemModel());
             }
 
@@ -146,6 +180,14 @@ public final class BorrowedItems {
         });
         refreshLore(placeholder);
         return placeholder;
+    }
+
+    @Nullable
+    private static Material vanillaItem(NamespacedKey model) {
+        if (model == null) return null;
+        if (!model.getNamespace().equals(NamespacedKey.MINECRAFT)) return null;
+        Material material = Material.matchMaterial(model.getKey());
+        return material != null && material.isItem() && !material.isAir() ? material : null;
     }
 
     public static void refreshLore(Inventory inventory) {
