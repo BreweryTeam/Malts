@@ -93,9 +93,11 @@ public class WarehouseCommand implements SubCommand {
         DEPOSIT {
             @Override
             public boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args) {
-                if (args.size() < 2) return false;
+                if (args.isEmpty()) return false;
                 Material material = Util.getEnum(args.getFirst(), Material.class);
-                int amount = Util.getInteger(args.get(1), 0);
+                int amount = (args.size() > 1) ?
+                        Util.getInteger(args.get(1), 0) :
+                        Util.getMaterialAmount(player.getInventory(), material);
 
                 if (!evaluateMaterial(player, material, args.getFirst(), amount)) {
                     return false;
@@ -123,9 +125,11 @@ public class WarehouseCommand implements SubCommand {
         WITHDRAW {
             @Override
             public boolean handle(Player player, MaltsPlayer maltsPlayer, Warehouse warehouse, List<String> args) {
-                if (args.size() < 2) return false;
+                if (args.isEmpty()) return false;
                 Material material = Util.getEnum(args.getFirst(), Material.class);
-                int amount = Util.getInteger(args.get(1), 0);
+                int amount = (args.size() > 1) ?
+                        Util.getInteger(args.get(1), 0) :
+                        Util.getAmountInvCanHold(player.getInventory(), material);
 
                 if (!evaluateMaterial(player, material, args.getFirst(), amount)) {
                     return false;
