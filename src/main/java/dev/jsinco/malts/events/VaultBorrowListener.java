@@ -4,6 +4,8 @@ import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.model.Vault;
 import dev.jsinco.malts.model.VaultKey;
+import dev.jsinco.malts.model.VaultSession;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.utility.BorrowedItems;
 import dev.jsinco.malts.utility.Executors;
 import org.bukkit.entity.Player;
@@ -49,28 +51,38 @@ public class VaultBorrowListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     public void onVaultClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder(false) instanceof Vault vault)) {
+        Inventory view = event.getView().getTopInventory();
+        if (!(view.getHolder(false) instanceof Vault vaultView)) {
             return;
         }
-        Inventory top = event.getInventory();
         Inventory clicked = event.getClickedInventory();
         if (clicked == null) {
             return;
         }
 
         Player player = (Player) event.getWhoClicked();
-        if (clicked != top) {
-            switch (event.getAction()) {
-                case MOVE_TO_OTHER_INVENTORY -> handleShiftReturn(event, vault, top);
-                case COLLECT_TO_CURSOR -> event.setCancelled(vault.isLockActive());
-                default -> {}
+        VaultSession session = VaultSessions.get(vaultView.getKey());
+        boolean inTop = clicked == view;
+        boolean applied = session != null && session.mutate(player, vaultView, master -> {
+            Inventory top = master.getInventory();
+            if (!inTop) {
+                switch (event.getAction()) {
+                    case MOVE_TO_OTHER_INVENTORY -> handleShiftReturn(event, master, top);
+                    case COLLECT_TO_CURSOR -> {
+                        if (master.isLockActive()) event.setCancelled(true);
+                    }
+                    default -> {}
+                }
+            } else if (BorrowedItems.isPlaceholder(top.getItem(event.getSlot()))) {
+                event.setCancelled(true);
+                handlePlaceholderClick(event, player, master, top);
+            } else if (master.isLockActive()) {
+                event.setCancelled(true);
+                handleBorrow(event, player, top);
             }
-        } else if (BorrowedItems.isPlaceholder(event.getCurrentItem())) {
-            event.setCancelled(true);
-            handlePlaceholderClick(event, player, vault, top);
-        } else if (vault.isLockActive()) {
-            event.setCancelled(true);
-            handleBorrow(event, player, top);
+        });
+        if (!applied && inTop) {
+            event.setCancelled(true); // Not a registered viewer of this vault
         }
 
         if (event.isCancelled()) {
@@ -80,14 +92,25 @@ public class VaultBorrowListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOW)
     public void onVaultDrag(InventoryDragEvent event) {
-        if (!(event.getInventory().getHolder(false) instanceof Vault vault)) {
+        if (!(event.getView().getTopInventory().getHolder(false) instanceof Vault vaultView)) {
             return;
         }
         int topSize = event.getView().getTopInventory().getSize();
-        for (int rawSlot : event.getRawSlots()) {
-            if (rawSlot < topSize && (vault.isLockActive() || BorrowedItems.isPlaceholder(event.getView().getItem(rawSlot)))) {
-                event.setCancelled(true);
-                return;
+        VaultSession session = VaultSessions.get(vaultView.getKey());
+        Boolean blocked = session == null ? Boolean.TRUE : session.read(master -> {
+            for (int rawSlot : event.getRawSlots()) {
+                if (rawSlot < topSize && (master.isLockActive() || BorrowedItems.isPlaceholder(master.getInventory().getItem(rawSlot)))) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        if (blocked == null || blocked) {
+            for (int rawSlot : event.getRawSlots()) {
+                if (rawSlot < topSize) {
+                    event.setCancelled(true);
+                    return;
+                }
             }
         }
     }
@@ -104,7 +127,7 @@ public class VaultBorrowListener implements Listener {
     }
 
     private void handleBorrow(InventoryClickEvent event, Player player, Inventory top) {
-        ItemStack current = event.getCurrentItem();
+        ItemStack current = top.getItem(event.getSlot());
         if (current == null || current.isEmpty()) {
             return;
         }
@@ -132,9 +155,9 @@ public class VaultBorrowListener implements Listener {
     }
 
     private void handlePlaceholderClick(InventoryClickEvent event, Player player, Vault vault, Inventory top) {
-        ItemStack placeholder = event.getCurrentItem();
-        if (placeholder == null) return;
         int slot = event.getSlot();
+        ItemStack placeholder = top.getItem(slot);
+        if (placeholder == null) return;
         int hotbarSlot = hotbarSlot(event);
 
         if (hotbarSlot >= 0) {

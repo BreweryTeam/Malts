@@ -6,13 +6,10 @@ import com.google.gson.reflect.TypeToken;
 import dev.jsinco.malts.api.events.interfaces.EventAction;
 import dev.jsinco.malts.api.events.vault.VaultIconChangeEvent;
 import dev.jsinco.malts.api.events.vault.VaultNameChangeEvent;
-import dev.jsinco.malts.api.events.vault.VaultOpenEvent;
 import dev.jsinco.malts.api.events.vault.VaultTrustPlayerEvent;
 import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.configuration.files.Lang;
-import dev.jsinco.malts.storage.DataSource;
-import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Text;
 import dev.jsinco.malts.utility.Util;
 import lombok.Getter;
@@ -23,7 +20,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -37,7 +33,8 @@ import java.util.concurrent.CompletableFuture;
  * Represents a transient vault inventory in Malts.
  *
  * <p>
- * Please note: Unlike other objects in malts, vaults are never cached in memory and are always transient.
+ * Please note: Unlike other objects in malts, vaults are not cached in memory. While a vault is open,
+ * its contents are managed by a VaultSession until the last viewer closes it, and it has been saved.
  * </p>
  *
  * @see dev.jsinco.malts.storage.DataSource#getVault(UUID, int) 
@@ -130,63 +127,22 @@ public class Vault implements MaltsInventory {
      * @param player the player to open the vault for
      */
     public void open(Player player) {
-        this.getViewers().thenAccept(viewers -> {
-            State canOpen = this.canOpen(player, viewers);
-            VaultOpenEvent event = new VaultOpenEvent(this, player, viewers, !Bukkit.isPrimaryThread());
-            event.setCancelled(!canOpen.toBoolean());
-            Text.debug("Player " + player.getName() + " is attempting to open vault " + this.key.id() + ". Can open: " + canOpen);
-
-            if (!event.callEvent()) {
-                if (canOpen == State.DATABASE_BUSY) {
-                    LANG.entry(l -> l.vaults().databaseBusy(), player);
-                } else {
-                    LANG.entry(l -> l.vaults().alreadyOpen(), player);
-                }
-                return;
-            }
-
-            Executors.runSync(player, () -> {
-                // Re-check on the player's thread, the async canOpen check may be stale by now.
-                // Opening a fresh copy over one already being viewed would expose unsaved (stale) contents.
-                if (this.equals(player.getOpenInventory().getTopInventory().getHolder(false))) {
-                    LANG.entry(l -> l.vaults().alreadyOpen(), player);
-                    return;
-                }
-                if (DataSource.getInstance().isLocked(this.key)) {
-                    LANG.entry(l -> l.vaults().databaseBusy(), player);
-                    return;
-                }
-                player.openInventory(this.inventory);
-            });
-
-            if (viewers.isEmpty()) {
-                return;
-            }
-
-            Player otherPlayer = viewers.getFirst();
-            Executors.runSync(otherPlayer, () -> {
-                if (otherPlayer.getOpenInventory().getTopInventory().getHolder(false) instanceof Vault otherVault) {
-                    otherVault.update(otherPlayer); // Update this vault
-                }
-            });
-        });
+        VaultSessions.open(player, this);
     }
 
 
     public State canOpen(Player player, List<Player> viewers) {
         // A vault can be opened by a player if:
         // - No other players are viewing it
+        // - Shared viewing is enabled
         // - The player has the bypass permission
         // - The only other viewers are players with the bypass permission
-        // A vault may never be opened if it is locked.
-        DataSource dataSource = DataSource.getInstance();
-        if (dataSource.isLocked(this.key)) {
-            Text.debug("Vault " + this.key.id() + " is locked, player " + player.getName() + " cannot open it.");
-            return State.DATABASE_BUSY;
-        }
-
         if (viewers.isEmpty()) {
             Text.debug("Vault " + this.key.id() + " has no viewers, player " + player.getName() + " can open it.");
+            return State.AVAILABLE;
+        }
+
+        if (CONFIG.vaults().sharedViewing()) {
             return State.AVAILABLE;
         }
 
@@ -212,52 +168,8 @@ public class Vault implements MaltsInventory {
 
 
     public CompletableFuture<List<Player>> getViewers() {
-        List<Player> viewers = new ArrayList<>();
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            Executors.runSync(player, () -> {
-                try {
-                    if (this.equals(player.getOpenInventory().getTopInventory().getHolder(false))) {
-                        synchronized (viewers) {
-                            viewers.add(player);
-                        }
-                    }
-                } finally {
-                    future.complete(null);
-                }
-            });
-            futures.add(future);
-        }
-
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenApply(v -> viewers);
-    }
-
-    /**
-     * Malts holds no references to open vaults.
-     * This method updates all open inventories of this vault for all players except the updater.
-     * This method runs synchronously, avoid superfluous calls.
-     * 
-     * @param updater the player who initiated the update, may be null
-     */
-    public void update(@Nullable Player updater) {
-        Executors.delayedSync(1, () -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (updater != null && player.getUniqueId() == updater.getUniqueId()) {
-                    continue;
-                }
-
-                Executors.sync(player, () -> {
-                    Inventory inv = player.getOpenInventory().getTopInventory();
-                    if (this.equals(inv.getHolder(false))) {
-                        inv.setContents(this.inventory.getContents());
-                        Text.debug("Updated inventory for player " + player.getName() + " with vault " + this.key.id());
-                    }
-                });
-            }
-        });
+        VaultSession session = VaultSessions.get(this.key);
+        return CompletableFuture.completedFuture(session != null ? session.viewerPlayers(null) : new ArrayList<>());
     }
 
 
@@ -367,17 +279,35 @@ public class Vault implements MaltsInventory {
      * while someone has it open neither reverts their items nor gets reverted when they close it.
      */
     public CompletableFuture<Void> saveMeta() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            Executors.runSync(player, () -> {
-                if (player.getOpenInventory().getTopInventory().getHolder(false) instanceof Vault open && this.equals(open) && open != this) {
-                    open.customName = this.customName;
-                    open.icon = this.icon;
-                    open.trustedPlayers = new ArrayList<>(this.trustedPlayers);
-                    open.locked = this.locked;
-                }
-            });
-        }
-        return DataSource.getInstance().saveVaultMeta(this);
+        return VaultSessions.acquire(this.key).thenCompose(session -> {
+            try {
+                session.applyMeta(this);
+                return session.save();
+            } finally {
+                session.release();
+            }
+        });
+    }
+
+    void copyMetaFrom(Vault other) {
+        this.customName = other.customName;
+        this.icon = other.icon;
+        this.trustedPlayers = new ArrayList<>(other.trustedPlayers);
+        this.locked = other.locked;
+    }
+
+    Vault snapshot() {
+        return new Vault(this);
+    }
+
+    private Vault(Vault source) {
+        this.key = source.key;
+        this.customName = source.customName;
+        this.icon = source.icon;
+        this.trustedPlayers = new ArrayList<>(source.trustedPlayers);
+        this.locked = source.locked;
+        this.inventory = Bukkit.createInventory(this, source.inventory.getSize(), Text.mm(this.customName));
+        this.inventory.setContents(VaultSession.cloneContents(source.inventory.getContents()));
     }
 
     /**

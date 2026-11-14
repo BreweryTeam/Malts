@@ -173,6 +173,13 @@ public class Config extends OkaeriFile {
                 "When disabled, the lock option is hidden and all vaults behave as unlocked."
         })
         private boolean lockingEnabled = true;
+
+        @Comment({
+                "Allows multiple players to open the same vault at the same time.",
+                "When disabled, only players with 'malts.bypass.openvault'",
+                "can open a vault someone else is viewing."
+        })
+        private boolean sharedViewing = false;
     }
 
 

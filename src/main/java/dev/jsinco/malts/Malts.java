@@ -10,21 +10,24 @@ import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.events.ChatPromptInputListener;
 import dev.jsinco.malts.events.GuiListener;
 import dev.jsinco.malts.events.PlayerListener;
+import dev.jsinco.malts.events.VaultClickEngine;
 import dev.jsinco.malts.events.VaultBorrowListener;
 import dev.jsinco.malts.events.VaultListener;
 import dev.jsinco.malts.events.WarehouseListener;
 import dev.jsinco.malts.integration.Integration;
 import dev.jsinco.malts.integration.external.NexoIntegration;
 import dev.jsinco.malts.logging.MaltsLogger;
-import dev.jsinco.malts.logging.VaultLogListener;
 import dev.jsinco.malts.model.MaltsInventory;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.ExceptionUtil;
+import dev.jsinco.malts.utility.InternalScheduler;
 import io.papermc.paper.ServerBuildInfo;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.key.Key;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -67,15 +70,18 @@ public class Malts extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(), this);
         getServer().getPluginManager().registerEvents(new VaultListener(), this);
         getServer().getPluginManager().registerEvents(new VaultBorrowListener(), this);
-        getServer().getPluginManager().registerEvents(new VaultLogListener(), this);
+        getServer().getPluginManager().registerEvents(new VaultClickEngine(), this);
         getServer().getPluginManager().registerEvents(new WarehouseListener(), this);
         getServer().getPluginManager().registerEvents(new GuiListener(), this);
         getServer().getPluginManager().registerEvents(new ChatPromptInputListener(), this);
+
+        VaultSessions.start();
     }
 
     @Override
     public void onDisable() {
         shutdown = true;
+        VaultSessions.shutdown();
 
         MaltsLogger logger = MaltsLogger.get();
         if (logger != null) {
@@ -95,12 +101,11 @@ public class Malts extends JavaPlugin {
             }
         };
         for (Player player : getServer().getOnlinePlayers()) {
-            if (FOLIA) {
-                player.getScheduler().execute(this, () -> {
-                    consumer.accept(player);
-                }, null, 1);
-            } else {
+            if (Bukkit.isOwnedByCurrentRegion(player)) {
                 consumer.accept(player);
+            } else {
+                // A disabling plugin can't use the plugin scheduler anymore
+                InternalScheduler.schedule(player, () -> consumer.accept(player), () -> {});
             }
         }
 

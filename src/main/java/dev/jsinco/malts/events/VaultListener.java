@@ -8,7 +8,8 @@ import dev.jsinco.malts.gui.MaltsGui;
 import dev.jsinco.malts.gui.VaultOtherGui;
 import dev.jsinco.malts.gui.YourVaultsGui;
 import dev.jsinco.malts.model.MaltsPlayer;
-import dev.jsinco.malts.model.VaultKey;
+import dev.jsinco.malts.model.VaultSession;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.model.Vault;
 import org.bukkit.Bukkit;
@@ -17,39 +18,19 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.inventory.InventoryHolder;
 
 public class VaultListener implements Listener {
 
-    // Save vault data when the inventory is closed
+    // Leaving a vault saves it (see VaultSession)
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
-        InventoryHolder holder = event.getInventory().getHolder(false);
-        if (!(holder instanceof Vault vault)) {
+        if (!(event.getInventory().getHolder(false) instanceof Vault view)) {
             return;
         }
-
-        vault.update((Player) event.getPlayer());
-        VaultKey key = vault.getKey();
-
-        DataSource dataSource = DataSource.getInstance();
-
-        // Starting save, lock the vault to prevent opening while we save
-        dataSource.lock(key);
-
-        dataSource.saveVault(vault).thenRun(() -> {
-            // Finished saving, we can release
-            dataSource.releaseLock(key);
-        });
-    }
-
-    @EventHandler
-    public void onInventoryInteract(InventoryDragEvent event) {
-        if (!(event.getInventory().getHolder(false) instanceof Vault vault)) {
-            return;
+        VaultSession session = VaultSessions.get(view.getKey());
+        if (session != null) {
+            session.leave((Player) event.getPlayer(), view);
         }
-        vault.update((Player) event.getWhoClicked());
     }
 
     @EventHandler
@@ -67,7 +48,6 @@ public class VaultListener implements Listener {
         Config.QuickReturn quickReturn = ConfigManager.get(Config.class).quickReturn();
 
         if (event.getClickedInventory() != null) {
-            vault.update(player);
             return;
         }
 

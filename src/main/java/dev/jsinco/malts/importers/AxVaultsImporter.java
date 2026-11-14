@@ -1,6 +1,7 @@
 package dev.jsinco.malts.importers;
 
 import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.ClassUtil;
 import dev.jsinco.malts.utility.Couple;
@@ -61,14 +62,15 @@ public class AxVaultsImporter implements Importer {
                     Map<Integer, ItemStack[]> inventories = vaultMap.entrySet().stream()
                             .filter(entry -> {
                                 ItemStack[] contents = entry.getValue().getStorage().getContents();
-                                return contents != null && contents.length > 0;
+                                return contents.length > 0;
                             })
                             .collect(Collectors.toMap(
                                     Map.Entry::getKey,
                                     entry -> entry.getValue().getStorage().getContents()
                             ));
 
-                    return DataSource.getInstance().getVaults(uuid)
+                    // Close all open vaults of this player first, so they can't overwrite imported vaults
+                    return VaultSessions.withClosedVaults(List.of(uuid), () -> DataSource.getInstance().getVaults(uuid)
                             .thenCompose(existing -> {
                                 if (!existing.isEmpty()) {
                                     return CompletableFuture.completedFuture(Couple.of(uuid, Result.VAULTS_NOT_EMPTY));
@@ -76,7 +78,7 @@ public class AxVaultsImporter implements Importer {
 
                                 return saveAllVaults(uuid, inventories)
                                         .thenApply(v -> Couple.of(uuid, Result.SUCCESS));
-                            });
+                            }));
                 })
                 .exceptionally(error -> {
                     Text.error("Failed to import vaults for " + uuid, error);

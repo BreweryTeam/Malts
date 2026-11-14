@@ -4,10 +4,10 @@ import dev.jsinco.malts.commands.interfaces.SubCommand;
 import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
-import dev.jsinco.malts.utility.Executors;
 import dev.jsinco.malts.utility.Util;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,6 +20,7 @@ import org.bukkit.entity.Player;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -95,7 +96,14 @@ public class VaultAdminCommand implements SubCommand {
             DataSource dataSource = DataSource.getInstance();
             int vaultId = Util.getInteger(args.getFirst(), -1);
             if (vaultId < 0) return false;
-            dataSource.deleteVault(offlinePlayer.getUniqueId(), vaultId).thenAccept(deleted -> {
+            // An open copy of the vault would otherwise be saved again after the deletion:
+            VaultSessions.withClosedVaults(List.of(offlinePlayer.getUniqueId()),
+                    () -> dataSource.deleteVault(offlinePlayer.getUniqueId(), vaultId)
+            ).whenComplete((deleted, throwable) -> {
+                if (throwable != null) {
+                    LANG.entry(l -> l.vaults().databaseBusy(), sender);
+                    return;
+                }
                 if (deleted) {
                     MaltsLogger.logger().logVaultDelete(sender, offlinePlayer.getUniqueId(), vaultId);
                 }
@@ -132,7 +140,8 @@ public class VaultAdminCommand implements SubCommand {
                 return true;
             }
 
-            Executors.runAsync(task -> {
+            // Close and save all open vaults of both players first, so nothing can overwrite the transfer
+            VaultSessions.withClosedVaults(List.of(offlinePlayer.getUniqueId(), otherPlayer.getUniqueId()), () -> {
                 List<Vault> player1Vaults = dataSource.getVaults(offlinePlayer.getUniqueId()).join().stream().map(it -> it.toVault().join()).toList();
                 List<Vault> player2Vaults = dataSource.getVaults(otherPlayer.getUniqueId()).join().stream().map(it -> it.toVault().join()).toList();
 
@@ -154,6 +163,11 @@ public class VaultAdminCommand implements SubCommand {
                         Couple.of("{otherAmount}", player2Vaults.size()),
                         Couple.of("{otherName}", otherPlayer.getName())
                 );
+                return CompletableFuture.completedFuture(null);
+            }).whenComplete((unused, throwable) -> {
+                if (throwable != null) {
+                    LANG.entry(l -> l.vaults().databaseBusy(), sender);
+                }
             });
             return true;
         }, (sender, label, args, offlinePlayer) -> {

@@ -2,6 +2,7 @@ package dev.jsinco.malts.importers;
 
 import dev.jsinco.malts.Malts;
 import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.ClassUtil;
 import dev.jsinco.malts.utility.Couple;
@@ -81,7 +82,8 @@ public class PlayerVaultsImporter implements Importer {
             return CompletableFuture.completedFuture(Couple.of(owner, Result.NO_VAULTS_IN_OTHER_PLUGIN));
         }
 
-        return dataSource.getVaults(owner).thenCompose(existing -> {
+        // Close all open vaults of this player first, so they can't overwrite imported vaults
+        return VaultSessions.withClosedVaults(List.of(owner), () -> dataSource.getVaults(owner).thenCompose(existing -> {
             if (!existing.isEmpty()) {
                 return CompletableFuture.completedFuture(Couple.of(owner, Result.VAULTS_NOT_EMPTY));
             }
@@ -98,7 +100,7 @@ public class PlayerVaultsImporter implements Importer {
             }
 
             return chain.thenApply(v -> Couple.of(owner, expectedResult));
-        });
+        }));
     }
 
     public Path path() {

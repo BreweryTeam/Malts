@@ -8,6 +8,7 @@ import dev.jsinco.malts.configuration.files.Config;
 import dev.jsinco.malts.integration.compiled.UpdateCheckIntegration;
 import dev.jsinco.malts.logging.MaltsLogger;
 import dev.jsinco.malts.registry.Registry;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.storage.DataSource;
 import dev.jsinco.malts.utility.Couple;
 import dev.jsinco.malts.utility.Text;
@@ -34,6 +35,7 @@ public class ReloadCommand implements SubCommand {
             if (!oldStorage.equals(newStorage)) {
                 Text.log("Storage configuration has changed, re-initializing data source...");
                 DataSource dataSource = DataSource.getInstance();
+                VaultSessions.flush(); // In case the database changed
                 dataSource.close().whenComplete((unused, throwable) -> {
                     DataSource.createInstance(newStorage);
                     LANG.entry(l -> l.command().reload().newDatabaseDriverSet(), sender, Couple.of("{driver}", newStorage.driver().toString()));

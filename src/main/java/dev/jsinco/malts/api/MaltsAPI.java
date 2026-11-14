@@ -11,6 +11,7 @@ import dev.jsinco.malts.integration.Integration;
 import dev.jsinco.malts.model.MaltsPlayer;
 import dev.jsinco.malts.model.SnapshotVault;
 import dev.jsinco.malts.model.Vault;
+import dev.jsinco.malts.model.VaultSessions;
 import dev.jsinco.malts.model.Warehouse;
 import dev.jsinco.malts.registry.Registry;
 import dev.jsinco.malts.storage.DataSource;
@@ -19,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -164,23 +166,25 @@ public final class MaltsAPI {
 
     /**
      * Saves the given vault to the database.
+     * If the vault is open, it is first closed for everyone viewing it and saved, then overwritten with the given vault.
      * @param vault The vault to save
      * @return A future that will complete when the vault is saved, or complete exceptionally if an error occurs
      */
     @NotNull
     public static CompletableFuture<@NotNull Void> saveVault(Vault vault) {
-        return getDataSource().saveVault(vault);
+        return VaultSessions.withClosedVaults(List.of(vault.getOwner()), () -> getDataSource().saveVault(vault));
     }
 
     /**
      * Deletes the vault with the given owner and id from the database.
+     * If the vault is open, it is first closed for everyone viewing it and saved.
      * @param owner The owner of the vault
      * @param id The id of the vault
      * @return A future that will complete with true if the vault was deleted, false if it did not exist, or complete exceptionally if an error occurs
      */
     @NotNull
     public static CompletableFuture<@NotNull Boolean> deleteVault(UUID owner, int id) {
-        return getDataSource().deleteVault(owner, id);
+        return VaultSessions.withClosedVaults(List.of(owner), () -> getDataSource().deleteVault(owner, id));
     }
 
     /**
