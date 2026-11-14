@@ -4,15 +4,23 @@ import dev.jsinco.malts.configuration.ConfigManager;
 import dev.jsinco.malts.configuration.files.Lang;
 import dev.jsinco.malts.integration.external.NexoIntegration;
 import dev.jsinco.malts.registry.Registry;
+import io.papermc.paper.datacomponent.DataComponentType;
 import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.TooltipDisplay;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.tags.EnchantmentTagKeys;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -23,7 +31,10 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -167,7 +178,8 @@ public final class BorrowedItems {
                 meta.setItemModel(source.getItemModel());
             }
 
-            List<Component> lore = source.hasLore() ? source.lore() : List.of();
+            List<Component> lore = new ArrayList<>(enchantmentLines(real, source));
+            if (source.hasLore()) lore.addAll(source.lore());
             meta.lore(lore);
 
             PersistentDataContainer pdc = meta.getPersistentDataContainer();
@@ -175,11 +187,48 @@ public final class BorrowedItems {
             pdc.set(BORROWER, PersistentDataType.STRING, borrower.getUniqueId().toString());
             pdc.set(BORROWER_NAME, PersistentDataType.STRING, borrower.getName());
             pdc.set(BORROWED_AT, PersistentDataType.LONG, System.currentTimeMillis());
-            pdc.set(ORIGINAL_LORE_SIZE, PersistentDataType.INTEGER, lore != null ? lore.size() : 0);
+            pdc.set(ORIGINAL_LORE_SIZE, PersistentDataType.INTEGER, lore.size());
             pdc.set(ORIGINAL, PersistentDataType.BYTE_ARRAY, normalize(real).serializeAsBytes());
         });
+        TooltipDisplay tooltip = real.getData(DataComponentTypes.TOOLTIP_DISPLAY);
+        if (tooltip != null) {
+            placeholder.setData(DataComponentTypes.TOOLTIP_DISPLAY, tooltip);
+        }
         refreshLore(placeholder);
         return placeholder;
+    }
+
+    private static List<Component> enchantmentLines(ItemStack real, ItemMeta source) {
+        TooltipDisplay tooltip = real.getData(DataComponentTypes.TOOLTIP_DISPLAY);
+        if (tooltip != null && tooltip.hideTooltip()) return List.of();
+        Set<DataComponentType> hidden = tooltip != null ? tooltip.hiddenComponents() : Set.of();
+
+        Map<Enchantment, Integer> enchants = new LinkedHashMap<>();
+        if (source instanceof EnchantmentStorageMeta storage && !hidden.contains(DataComponentTypes.STORED_ENCHANTMENTS)) {
+            enchants.putAll(storage.getStoredEnchants());
+        }
+        if (!hidden.contains(DataComponentTypes.ENCHANTMENTS)) {
+            source.getEnchants().forEach((enchantment, level) -> enchants.merge(enchantment, level, Math::max));
+        }
+        if (enchants.isEmpty()) return List.of();
+
+        // Vanilla lists enchantments in the tooltip_order tag first
+        List<Enchantment> ordered = new ArrayList<>();
+        try {
+            for (Enchantment enchantment : RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT).getTagValues(EnchantmentTagKeys.TOOLTIP_ORDER)) {
+                if (enchants.containsKey(enchantment)) ordered.add(enchantment);
+            }
+        } catch (RuntimeException ignored) {
+        }
+        for (Enchantment enchantment : enchants.keySet()) {
+            if (!ordered.contains(enchantment)) ordered.add(enchantment);
+        }
+
+        List<Component> lines = new ArrayList<>(ordered.size());
+        for (Enchantment enchantment : ordered) {
+            lines.add(enchantment.displayName(enchants.get(enchantment)).decoration(TextDecoration.ITALIC, false));
+        }
+        return lines;
     }
 
     @Nullable
