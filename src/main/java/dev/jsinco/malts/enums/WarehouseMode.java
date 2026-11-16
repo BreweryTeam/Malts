@@ -26,6 +26,7 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -140,13 +141,25 @@ public enum WarehouseMode {
         }
 
         Executors.delayedSync(player, 1, () -> {
-            ItemStack itemInHand = player.getInventory().getItem(hand);
+            PlayerInventory inventory = player.getInventory();
+            ItemStack itemInHand = inventory.getItem(hand);
+            int maxStackSize = material.getMaxStackSize();
+            boolean refillHand = itemInHand.isEmpty() || itemInHand.isSimilar(ItemStack.of(material));
+            int handAmount = itemInHand.isEmpty() ? 0 : itemInHand.getAmount();
 
-            ItemStack item = warehouse.destockItem(player, material, itemInHand.getMaxStackSize() - itemInHand.getAmount());
+            ItemStack item = warehouse.destockItem(player, material, refillHand ? maxStackSize - handAmount : maxStackSize);
             if (item == null) {
                 return;
             }
-            int amt = warehouse.addDestockedItem(player, player.getInventory(), item);
+
+            int amt;
+            if (refillHand) {
+                // Inventory#addItem doesn't refill the offhand
+                amt = item.getAmount();
+                inventory.setItem(hand, item.asQuantity(handAmount + amt));
+            } else {
+                amt = warehouse.addDestockedItem(player, inventory, item);
+            }
             ConfigManager.get(Lang.class).actionBarEntry(l -> l.warehouse().replenishedItem(), player,
                     Couple.of("{material}", Util.formatEnumerator(material)),
                     Couple.of("{amount}", amt),
