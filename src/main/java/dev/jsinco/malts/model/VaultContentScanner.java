@@ -140,6 +140,37 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
         return false;
     }
 
+    private static ItemStack displayCopy(ItemStack itemStack) {
+        return displayCopy(itemStack, 0);
+    }
+
+    @SuppressWarnings("UnstableApiUsage")
+    private static ItemStack displayCopy(ItemStack itemStack, int depth) {
+        if (itemStack.isEmpty()) return itemStack;
+        ItemStack copy = itemStack.clone();
+
+        if ((copy.hasData(DataComponentTypes.DAMAGE) || copy.hasData(DataComponentTypes.MAX_DAMAGE)) && copy.getMaxStackSize() > 1) {
+            copy.setData(DataComponentTypes.MAX_STACK_SIZE, 1);
+        }
+        if (copy.getAmount() > copy.getMaxStackSize()) {
+            copy.setAmount(copy.getMaxStackSize());
+        }
+
+        if (depth < MAX_CONTAINER_DEPTH) {
+            ItemContainerContents container = copy.getData(DataComponentTypes.CONTAINER);
+            if (container != null) {
+                copy.setData(DataComponentTypes.CONTAINER, ItemContainerContents.containerContents(
+                        container.contents().stream().map(i -> displayCopy(i, depth + 1)).toList()));
+            }
+            BundleContents bundle = copy.getData(DataComponentTypes.BUNDLE_CONTENTS);
+            if (bundle != null) {
+                copy.setData(DataComponentTypes.BUNDLE_CONTENTS, BundleContents.bundleContents(
+                        bundle.contents().stream().map(i -> displayCopy(i, depth + 1)).toList()));
+            }
+        }
+        return copy;
+    }
+
     public static IntPair rangeForPage(int page) {
         int perPage = RANGE_PER_PAGE.b();
         int start = (page - 1) * perPage + 1;
@@ -261,12 +292,12 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
                         Component containers = Component.join(
                                 JoinConfiguration.separator(containerSeparator),
                                 match.containers().stream()
-                                        .map(container -> container.effectiveName().hoverEvent(container.asHoverEvent()))
+                                        .map(container -> container.effectiveName().hoverEvent(displayCopy(container).asHoverEvent()))
                                         .toList()
                         );
                         return Util.replaceComponents(
                                         Text.mm(match.containers().isEmpty() ? format : nestedFormat),
-                                        Couple.of("{itemName}", itemStack.effectiveName().hoverEvent(itemStack.asHoverEvent())),
+                                        Couple.of("{itemName}", itemStack.effectiveName().hoverEvent(displayCopy(itemStack).asHoverEvent())),
                                         Couple.of("{amount}", String.valueOf(itemStack.getAmount())),
                                         Couple.of("{vaultName}", vaultName),
                                         Couple.of("{containers}", containers)
@@ -281,7 +312,7 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
         private static ItemStack vaultPreview(Vault vault) {
             List<ItemStack> contents = Arrays.stream(vault.getInventory().getContents())
                     .limit(MAX_CONTAINER_SLOTS)
-                    .map(item -> item == null ? ItemStack.empty() : item)
+                    .map(item -> item == null ? ItemStack.empty() : displayCopy(item))
                     .toList();
             ItemStack preview = ItemStack.of(Material.CHEST);
             preview.setData(DataComponentTypes.CUSTOM_NAME, Text.mm("<!i>" + GUI_CONFIG
