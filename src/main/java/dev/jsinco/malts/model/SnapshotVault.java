@@ -76,7 +76,7 @@ public class SnapshotVault extends AbstractGuiItem {
     }
 
     public boolean canAccess(Player player) {
-        return player.getUniqueId() == this.key.owner() || this.trustedPlayers.contains(player.getUniqueId()) || player.hasPermission(BYPASS_OPEN_VAULT_PERM);
+        return player.getUniqueId().equals(this.key.owner()) || this.trustedPlayers.contains(player.getUniqueId()) || player.hasPermission(BYPASS_OPEN_VAULT_PERM);
     }
 
     @SuppressWarnings("unchecked")

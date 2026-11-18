@@ -20,6 +20,7 @@ import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Scans a collection of vaults for a given item(s) based
@@ -37,15 +39,15 @@ import java.util.Objects;
  * @see SearchCommand
  * @see Vault
  */
-public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair range, @Nullable String who) {
+public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair range, @Nullable String who, @Nullable UUID viewer) {
 
     private static final IntPair RANGE_PER_PAGE = IntPair.of(1, 6);
     private static final int MAX_CONTAINER_DEPTH = 8; // Bundles can be nested inside each other
     private static final int MAX_CONTAINER_SLOTS = 256; // Vanilla limit of the container data component
     private static final GuiConfig GUI_CONFIG = ConfigManager.get(GuiConfig.class);
 
-    public VaultContentScanner(Collection<Vault> vaults, int page, @Nullable String who) {
-        this(vaults, rangeForPage(page), who);
+    public VaultContentScanner(Collection<Vault> vaults, int page, @Nullable String who, @Nullable UUID viewer) {
+        this(vaults, rangeForPage(page), who, viewer);
     }
 
 
@@ -58,7 +60,7 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
 
                     if (matches.isEmpty()) return null;
 
-                    return new Result(vault, matches, who);
+                    return new Result(vault, matches, viewer);
                 })
                 .filter(Objects::nonNull)
                 .toList();
@@ -249,7 +251,7 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
         private final Vault vault;
         @Getter
         private final List<Match> matchingItems;
-        private final @Nullable String otherPlayer;
+        private final @Nullable UUID viewer;
 
         public List<Component> formatMatchingItems(String format, String nestedFormat, Component containerSeparator, Vault vault) {
             Component vaultName = Text.mm(vault.getCustomName()).hoverEvent(vaultPreview(vault).asHoverEvent());
@@ -290,11 +292,12 @@ public record VaultContentScanner(Collection<Vault> vaults, @Nullable IntPair ra
 
         private String vaultCommand() {
             // TODO: Make configurable
-            if (otherPlayer != null && !otherPlayer.isEmpty()) {
-                return "malts vaultother " + otherPlayer + " " + vault.getId();
-            } else {
+            UUID owner = vault.getOwner();
+            if (owner.equals(viewer)) {
                 return "malts vaults " + vault.getId();
             }
+            String ownerName = Bukkit.getOfflinePlayer(owner).getName();
+            return "malts vaultother " + (ownerName != null ? ownerName : owner.toString()) + " " + vault.getId();
         }
     }
 }

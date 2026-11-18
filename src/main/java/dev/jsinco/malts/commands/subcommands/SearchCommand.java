@@ -14,7 +14,9 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 
 public class SearchCommand implements SubCommand {
@@ -28,18 +30,27 @@ public class SearchCommand implements SubCommand {
         DataSource dataSource = DataSource.getInstance();
         ArgumentFlagReader argumentFlagReader = new ArgumentFlagReader(args);
         int page = Math.max(argumentFlagReader.getFlagValueAs("page", 1, Integer.class), 1);
-        OfflinePlayer player = getPlayer(sender, argumentFlagReader.getFlagValue("player"));
+        String playerName = argumentFlagReader.getFlagValue("player");
+        boolean allVaults = "*".equals(playerName) && sender.hasPermission(SEARCH_OTHERS_PERMISSION);
+        OfflinePlayer player = allVaults ? null : getPlayer(sender, playerName);
         String searchTerm = String.join(" ", argumentFlagReader.getNewArguments());
 
-        if (player == null) {
-            LANG.entry(l -> l.command().search().playerNotFound(), sender);
-            return true;
+        CompletableFuture<Collection<Vault>> vaults;
+
+        if (allVaults) {
+            vaults = dataSource.getAllVaultsNow();
+        } else {
+            if (player == null) {
+                LANG.entry(l -> l.command().search().playerNotFound(), sender);
+                return true;
+            }
+            vaults = dataSource.getVaultsNow(player.getUniqueId());
         }
 
-        dataSource.getVaults(player.getUniqueId()).thenAcceptAsync(snapshotVaults -> {
-            String name = player != sender ? player.getName() : null;
-            List<Vault> vaults = snapshotVaults.stream()
-                    .map(v -> v.toVault().join())
+
+        vaults.thenAcceptAsync(actualVaults -> {
+            String name = allVaults ? "*" : (player != sender ? player.getName() : null);
+            List<Vault> filteredVaults = actualVaults.stream()
                     .filter(v -> {
                         if (sender instanceof Player p) {
                             return v.canAccess(p);
@@ -48,12 +59,13 @@ public class SearchCommand implements SubCommand {
                     })
                     .toList();
 
-            if (vaults.isEmpty()) {
+            if (filteredVaults.isEmpty()) {
                 LANG.entry(l -> l.command().search().noAccessibleVaults(), sender, Couple.of("{name}", name));
                 return;
             }
 
-            VaultContentScanner scanner = new VaultContentScanner(vaults, page, name);
+            VaultContentScanner scanner = new VaultContentScanner(filteredVaults, page, name,
+                    sender instanceof Player p ? p.getUniqueId() : null);
             VaultContentScanner.ResultCollection results = scanner.matchingVaults(searchTerm);
             sender.sendMessage(results.queryResultSummary());
         });
@@ -69,7 +81,7 @@ public class SearchCommand implements SubCommand {
             if (pageArg != null) {
                 return Util.tryGetNextNumberArg(pageArg);
             } else if (reader.getFlagValue("player") != null) {
-                return null; // Let Bukkit handle player name completion
+                return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
             }
         }
 

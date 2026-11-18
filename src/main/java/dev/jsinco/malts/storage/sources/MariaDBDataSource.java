@@ -112,6 +112,20 @@ public class MariaDBDataSource extends DataSource {
     }
 
     @Override
+    public CompletableFuture<@NotNull Collection<Vault>> getVaultsNow(UUID owner) {
+        return Executors.supplyAsyncWithSQLException(() -> {
+            try (Connection connection = this.connection()) {
+                PreparedStatement statement = connection.prepareStatement(
+                    this.getStatement("vaults/select_owned_vaults.sql")
+                );
+                statement.setString(1, owner.toString());
+                ResultSet resultSet = statement.executeQuery();
+                return this.mapVaults(resultSet);
+            }
+        });
+    }
+
+    @Override
     public CompletableFuture<Void> saveVault(Vault vault) {
         return Executors.supplyAsyncWithSQLException(() -> {
             try (Connection connection = this.connection()) {
@@ -184,7 +198,7 @@ public class MariaDBDataSource extends DataSource {
     }
 
     @Override
-    public CompletableFuture<@NotNull Collection<Vault>> getAllVaults() {
+    public CompletableFuture<@NotNull Collection<Vault>> getAllVaultsNow() {
         return Executors.supplyAsyncWithSQLException(() -> {
             try (Connection connection = this.connection()) {
                 PreparedStatement statement = connection.prepareStatement(

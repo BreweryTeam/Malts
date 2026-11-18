@@ -245,7 +245,7 @@ public class Vault implements MaltsInventory {
     public void update(@Nullable Player updater) {
         Executors.delayedSync(1, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                if (updater != null && player.getUniqueId() == updater.getUniqueId()) {
+                if (updater != null && player.getUniqueId().equals(updater.getUniqueId())) {
                     continue;
                 }
 
@@ -268,11 +268,11 @@ public class Vault implements MaltsInventory {
      * @return true if the player can access the vault, false otherwise
      */
     public boolean canAccess(Player player) {
-        return player.getUniqueId() == this.key.owner() || this.trustedPlayers.contains(player.getUniqueId()) || player.hasPermission(BYPASS_OPEN_VAULT_PERM);
+        return player.getUniqueId().equals(this.key.owner()) || this.trustedPlayers.contains(player.getUniqueId()) || player.hasPermission(BYPASS_OPEN_VAULT_PERM);
     }
 
     public boolean isTrusted(UUID uuid) {
-        return trustedPlayers.contains(uuid) || uuid == this.key.owner();
+        return trustedPlayers.contains(uuid) || this.key.owner().equals(uuid);
     }
 
     /**

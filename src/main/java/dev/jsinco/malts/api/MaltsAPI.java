@@ -189,7 +189,7 @@ public final class MaltsAPI {
      */
     @NotNull
     public static CompletableFuture<@NotNull Collection<Vault>> getAllVaults() {
-        return getDataSource().getAllVaults();
+        return getDataSource().getAllVaultsNow();
     }
 
     /**
