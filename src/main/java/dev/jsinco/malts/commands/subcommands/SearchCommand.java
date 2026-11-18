@@ -81,7 +81,9 @@ public class SearchCommand implements SubCommand {
             if (pageArg != null) {
                 return Util.tryGetNextNumberArg(pageArg);
             } else if (reader.getFlagValue("player") != null) {
-                return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+                List<String> completions = new ArrayList<>(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+                completions.add("*");
+                return completions;
             }
         }
 

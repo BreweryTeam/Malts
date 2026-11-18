@@ -44,7 +44,7 @@ class VaultContentScannerTest {
     //@Test Can't test this, unimplemented methods in MockBukkit
     void testVaultScanResultsSize() {
         int page = 1;
-        VaultContentScanner scanner = new VaultContentScanner(this.mockVaults, page, null);
+        VaultContentScanner scanner = new VaultContentScanner(this.mockVaults, page, null, null);
         VaultContentScanner.ResultCollection results = scanner.matchingVaults("gold");
         assertEquals(1, results.getResults().size(), "Should find 1 vault with gold");
 
